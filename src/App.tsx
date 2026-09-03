@@ -217,16 +217,21 @@ export const App: React.FC = () => {
 
   // Listen for live peer awareness changes & new joiners
   useEffect(() => {
-    let lastPeerIds = new Set<number>();
+    let lastPeerKeys = new Set<string>();
+    let isInitial = true;
     const unsub = collabEngine.onPeersChange((peers) => {
       setCollabPeers(peers);
       setCollabRoomId(collabEngine.getRoomId());
-      peers.forEach((p) => {
-        if (!lastPeerIds.has(p.clientId)) {
-          showCollabToast(`👋 ${p.name} joined the live session!`);
-        }
-      });
-      lastPeerIds = new Set(peers.map((p) => p.clientId));
+      if (!isInitial) {
+        peers.forEach((p) => {
+          const key = `${p.name}-${p.color}`;
+          if (!lastPeerKeys.has(key)) {
+            showCollabToast(`👋 ${p.name} joined the live session!`);
+          }
+        });
+      }
+      isInitial = false;
+      lastPeerKeys = new Set(peers.map((p) => `${p.name}-${p.color}`));
     });
     return unsub;
   }, []);
@@ -308,9 +313,15 @@ export const App: React.FC = () => {
     [history, historyIndex, saveProjectToStore]
   );
 
-  // Live update without pushing to history or saving to localStorage on every frame (used during 120 FPS dragging)
+  const liveBroadcastRef = useRef<number>(0);
+  // Live update without pushing to history on every frame; throttles live drag sync to ~30 FPS for buttery smooth real-time motion
   const updateProjectLive = useCallback((updatedProject: FlowProject) => {
     setProject(updatedProject);
+    const now = Date.now();
+    if (now - liveBroadcastRef.current > 35) {
+      liveBroadcastRef.current = now;
+      collabEngine.updateProjectFromLocal(updatedProject);
+    }
   }, []);
 
   // --- PROJECT MANAGEMENT HANDLERS (DASHBOARD & NAVBAR) ---

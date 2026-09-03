@@ -29,7 +29,7 @@ export const MultiplayerCursors: React.FC<MultiplayerCursorsProps> = ({
             key={peer.clientId}
             className="drafo-peer-cursor-container"
             style={{
-              transform: `translate(${screenX}px, ${screenY}px)`
+              transform: `translate3d(${Math.round(screenX)}px, ${Math.round(screenY)}px, 0)`
             }}
           >
             {/* Cursor SVG Arrow */}

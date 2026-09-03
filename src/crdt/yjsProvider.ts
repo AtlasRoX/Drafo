@@ -49,6 +49,30 @@ export function generateUniqueRoomId(): string {
   return `room-${rand}-${timestamp}`;
 }
 
+const USER_PROFILE_STORAGE_KEY = 'drafo_collaborator_profile';
+
+function loadOrCreateLocalProfile(): { name: string; color: string } {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(USER_PROFILE_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name && parsed.color) return parsed;
+      }
+    } catch {}
+  }
+  const profile = {
+    name: getRandomName(),
+    color: getRandomColor()
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    } catch {}
+  }
+  return profile;
+}
+
 export class DrafoCollaborationEngine {
   private ydoc: Y.Doc;
   private webrtcProvider: WebrtcProvider | null = null;
@@ -58,13 +82,18 @@ export class DrafoCollaborationEngine {
   private onProjectSyncCallbacks: Set<(project: FlowProject) => void> = new Set();
   private onPeersChangeCallbacks: Set<(peers: PeerPresence[]) => void> = new Set();
   private isApplyingRemoteUpdate = false;
+  private heartbeatTimer: any = null;
+  private lastCursorBroadcast = 0;
 
   constructor() {
     this.ydoc = new Y.Doc();
-    this.localUser = {
-      name: getRandomName(),
-      color: getRandomColor()
-    };
+    this.localUser = loadOrCreateLocalProfile();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        this.leaveRoom();
+      });
+    }
   }
 
   /**
@@ -173,6 +202,20 @@ export class DrafoCollaborationEngine {
       this.webrtcProvider.on('peers', () => {
         this.notifyPeersChange();
       });
+
+      // Start active heartbeat timer (pings every 3.5s to keep active peer freshness alive)
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => {
+        const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
+        if (awareness && awareness.getLocalState()?.user) {
+          awareness.setLocalStateField('user', {
+            ...awareness.getLocalState()!.user,
+            lastActive: Date.now()
+          });
+          // Check for stale peers to prune ghost avatars
+          this.notifyPeersChange();
+        }
+      }, 3500);
     } catch (err) {
       console.error('Failed to join WebRTC/WebSocket collaboration room:', err);
     }
@@ -182,6 +225,16 @@ export class DrafoCollaborationEngine {
    * Leave the active collaboration session
    */
   public leaveRoom(): void {
+    const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
+    if (awareness) {
+      try {
+        awareness.setLocalState(null);
+      } catch {}
+    }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
     if (this.webrtcProvider) {
       this.webrtcProvider.destroy();
       this.webrtcProvider = null;
@@ -335,33 +388,57 @@ export class DrafoCollaborationEngine {
   }
 
   /**
-   * Broadcast local cursor position over awareness
+   * Broadcast local cursor position over awareness with high-performance throttling
    */
   public setLocalCursor(x: number | null, y: number | null, selectedId?: string | null): void {
     const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
     if (!awareness) return;
 
+    if (x === null || y === null) {
+      awareness.setLocalStateField('user', {
+        name: this.localUser.name,
+        color: this.localUser.color,
+        cursor: null,
+        selectedId: selectedId || null,
+        lastActive: Date.now()
+      });
+      return;
+    }
+
+    const now = Date.now();
+    // Throttle cursor updates to 40 FPS (25ms) for silky-smooth motion without flooding network
+    if (now - this.lastCursorBroadcast < 25) return;
+    this.lastCursorBroadcast = now;
+
     awareness.setLocalStateField('user', {
       name: this.localUser.name,
       color: this.localUser.color,
-      cursor: x !== null && y !== null ? { x, y } : null,
-      selectedId: selectedId || null
+      cursor: { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 },
+      selectedId: selectedId || null,
+      lastActive: now
     });
   }
 
   /**
-   * Set local username and color
+   * Set local username and color (persists across page reloads)
    */
   public setLocalUserProfile(name: string, color?: string): void {
     this.localUser.name = name;
     if (color) this.localUser.color = color;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(this.localUser));
+      } catch {}
+    }
+
     const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
     if (awareness) {
       const current = awareness.getLocalState()?.user || {};
       awareness.setLocalStateField('user', {
         ...current,
         name: this.localUser.name,
-        color: this.localUser.color
+        color: this.localUser.color,
+        lastActive: Date.now()
       });
     }
   }
@@ -371,29 +448,51 @@ export class DrafoCollaborationEngine {
   }
 
   /**
-   * Get active remote peers currently connected across WebRTC and WebSocket
+   * Get active remote peers currently connected across WebRTC and WebSocket.
+   * Filters out stale/zombie clients (>8s inactive) and deduplicates refreshed tabs.
    */
   public getRemotePeers(): PeerPresence[] {
     const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
     if (!awareness) return [];
 
     const states = awareness.getStates();
+    const metaMap = (awareness as any).meta as Map<number, { clock: number; lastUpdated: number }> | undefined;
     const myId = this.ydoc.clientID;
-    const peers: PeerPresence[] = [];
+    const now = Date.now();
+
+    // Map by unique identifier (name + color) to deduplicate old sessions from recently refreshed tabs
+    const activePeersMap = new Map<string, PeerPresence>();
 
     states.forEach((state: any, clientId: number) => {
-      if (clientId !== myId && state.user) {
-        peers.push({
-          clientId,
-          name: state.user.name || 'Anonymous Peer',
-          color: state.user.color || '#3B82F6',
-          cursor: state.user.cursor || null,
-          selectedId: state.user.selectedId || null
-        });
+      if (clientId === myId || !state.user) return;
+
+      // 1. Check timestamp freshness: drop ghost clients whose last update was > 8 seconds ago
+      if (metaMap) {
+        const meta = metaMap.get(clientId);
+        if (meta && now - meta.lastUpdated > 8000) {
+          return; // Skip stale / zombie client
+        }
+      }
+      if (state.user.lastActive && now - state.user.lastActive > 8000) {
+        return; // Skip stale client
+      }
+
+      const key = `${state.user.name}-${state.user.color}`;
+      const peerData: PeerPresence = {
+        clientId,
+        name: state.user.name || 'Anonymous Peer',
+        color: state.user.color || '#3B82F6',
+        cursor: state.user.cursor || null,
+        selectedId: state.user.selectedId || null
+      };
+
+      // Keep the most recent / active instance if the same collaborator has lingering clientIds
+      if (!activePeersMap.has(key)) {
+        activePeersMap.set(key, peerData);
       }
     });
 
-    return peers;
+    return Array.from(activePeersMap.values());
   }
 
   public onProjectSync(callback: (project: FlowProject) => void): () => void {
