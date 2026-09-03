@@ -2,6 +2,7 @@
 
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import type { FlowProject, FlowNode, FlowEdge, FlowSection } from '../types/flow.ts';
 
 export interface PeerPresence {
@@ -50,7 +51,8 @@ export function generateUniqueRoomId(): string {
 
 export class DrafoCollaborationEngine {
   private ydoc: Y.Doc;
-  private provider: WebrtcProvider | null = null;
+  private webrtcProvider: WebrtcProvider | null = null;
+  private wsProvider: WebsocketProvider | null = null;
   private currentRoomId: string | null = null;
   private localUser: { name: string; color: string };
   private onProjectSyncCallbacks: Set<(project: FlowProject) => void> = new Set();
@@ -66,22 +68,27 @@ export class DrafoCollaborationEngine {
   }
 
   /**
-   * Initialize or join a P2P WebRTC collaboration session
+   * Initialize or join collaboration session with dual WebRTC P2P + WebSocket transports
    */
   public joinRoom(roomId: string, password?: string): void {
-    if (this.currentRoomId === roomId && this.provider) return;
+    if (typeof window === 'undefined') return;
+    if (this.currentRoomId === roomId && (this.webrtcProvider || this.wsProvider)) return;
 
     this.leaveRoom();
     this.currentRoomId = roomId;
 
+    const cleanRoomId = roomId.trim();
+    const webrtcRoomName = `drafo-room-${cleanRoomId}`;
+    const wsRoomName = `drafo-sync-${cleanRoomId}`;
+
     const signalingServers = [
       'wss://y-webrtc-signaling.fly.dev',
-      'wss://y-webrtc.fly.dev',
-      'wss://demos.yjs.dev/ws'
+      'wss://y-webrtc.fly.dev'
     ];
 
     try {
-      this.provider = new WebrtcProvider(`drafo-room-${roomId}`, this.ydoc, {
+      // 1. Initialize P2P WebRTC Provider with Google STUN + OpenRelay TURN servers
+      this.webrtcProvider = new WebrtcProvider(webrtcRoomName, this.ydoc, {
         signaling: signalingServers,
         password: password && password.trim().length > 0 ? password.trim() : undefined,
         filterBcConns: false, // Keep BroadcastChannel enabled for instant multi-tab sync!
@@ -91,17 +98,41 @@ export class DrafoCollaborationEngine {
               { urls: 'stun:stun.l.google.com:19302' },
               { urls: 'stun:stun1.l.google.com:19302' },
               { urls: 'stun:stun2.l.google.com:19302' },
-              { urls: 'stun:stun3.l.google.com:19302' },
-              { urls: 'stun:stun4.l.google.com:19302' },
-              { urls: 'stun:global.stun.twilio.com:3478' },
-              { urls: 'stun:stun.cloudflare.com:3478' }
+              { urls: 'stun:stun.cloudflare.com:3478' },
+              { urls: 'stun:openrelay.metered.ca:80' },
+              {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelay',
+                credential: 'openrelay'
+              },
+              {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelay',
+                credential: 'openrelay'
+              },
+              {
+                urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+                username: 'openrelay',
+                credential: 'openrelay'
+              }
             ]
           }
         }
       });
 
-      // Set initial local presence in awareness
-      this.provider.awareness.setLocalStateField('user', {
+      // 2. Initialize WebSocket Provider for guaranteed cross-network, cellular & firewall sync
+      // Connects over outbound port 443; bridges peers across different NATs and networks seamlessly
+      this.wsProvider = new WebsocketProvider(
+        'wss://demos.yjs.dev/ws',
+        wsRoomName,
+        this.ydoc,
+        {
+          awareness: this.webrtcProvider.awareness
+        }
+      );
+
+      // Set initial local presence in shared awareness
+      this.webrtcProvider.awareness.setLocalStateField('user', {
         name: this.localUser.name,
         color: this.localUser.color,
         cursor: null,
@@ -109,7 +140,7 @@ export class DrafoCollaborationEngine {
       });
 
       // Listen for awareness changes (remote cursors & peer count)
-      this.provider.awareness.on('change', () => {
+      this.webrtcProvider.awareness.on('change', () => {
         this.notifyPeersChange();
       });
 
@@ -121,19 +152,29 @@ export class DrafoCollaborationEngine {
       });
 
       // Listen for provider connection and sync events
-      this.provider.on('synced', (data: { synced: boolean }) => {
+      this.webrtcProvider.on('synced', (data: { synced: boolean }) => {
         if (data && data.synced) {
           this.notifyProjectSync();
         }
       });
-      this.provider.on('status', () => {
+
+      this.wsProvider.on('sync', (isSynced: boolean) => {
+        if (isSynced) {
+          this.notifyProjectSync();
+        }
+      });
+      this.wsProvider.on('status', () => {
         this.notifyPeersChange();
       });
-      this.provider.on('peers', () => {
+
+      this.webrtcProvider.on('status', () => {
+        this.notifyPeersChange();
+      });
+      this.webrtcProvider.on('peers', () => {
         this.notifyPeersChange();
       });
     } catch (err) {
-      console.error('Failed to join WebRTC room:', err);
+      console.error('Failed to join WebRTC/WebSocket collaboration room:', err);
     }
   }
 
@@ -141,9 +182,13 @@ export class DrafoCollaborationEngine {
    * Leave the active collaboration session
    */
   public leaveRoom(): void {
-    if (this.provider) {
-      this.provider.destroy();
-      this.provider = null;
+    if (this.webrtcProvider) {
+      this.webrtcProvider.destroy();
+      this.webrtcProvider = null;
+    }
+    if (this.wsProvider) {
+      this.wsProvider.destroy();
+      this.wsProvider = null;
     }
     this.currentRoomId = null;
     if (typeof window !== 'undefined' && window.location.hash.startsWith('#room=')) {
@@ -293,9 +338,10 @@ export class DrafoCollaborationEngine {
    * Broadcast local cursor position over awareness
    */
   public setLocalCursor(x: number | null, y: number | null, selectedId?: string | null): void {
-    if (!this.provider) return;
+    const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
+    if (!awareness) return;
 
-    this.provider.awareness.setLocalStateField('user', {
+    awareness.setLocalStateField('user', {
       name: this.localUser.name,
       color: this.localUser.color,
       cursor: x !== null && y !== null ? { x, y } : null,
@@ -309,9 +355,10 @@ export class DrafoCollaborationEngine {
   public setLocalUserProfile(name: string, color?: string): void {
     this.localUser.name = name;
     if (color) this.localUser.color = color;
-    if (this.provider) {
-      const current = this.provider.awareness.getLocalState()?.user || {};
-      this.provider.awareness.setLocalStateField('user', {
+    const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
+    if (awareness) {
+      const current = awareness.getLocalState()?.user || {};
+      awareness.setLocalStateField('user', {
         ...current,
         name: this.localUser.name,
         color: this.localUser.color
@@ -324,12 +371,13 @@ export class DrafoCollaborationEngine {
   }
 
   /**
-   * Get active remote peers currently connected
+   * Get active remote peers currently connected across WebRTC and WebSocket
    */
   public getRemotePeers(): PeerPresence[] {
-    if (!this.provider) return [];
+    const awareness = this.webrtcProvider?.awareness || this.wsProvider?.awareness;
+    if (!awareness) return [];
 
-    const states = this.provider.awareness.getStates();
+    const states = awareness.getStates();
     const myId = this.ydoc.clientID;
     const peers: PeerPresence[] = [];
 
@@ -359,6 +407,12 @@ export class DrafoCollaborationEngine {
   }
 
   private notifyProjectSync(): void {
+    const yMeta = this.ydoc.getMap('meta');
+    const yNodes = this.ydoc.getMap('nodes');
+    // Guard against emitting blank canvas before sync packets arrive from remote peer
+    if (yNodes.size === 0 && !yMeta.has('name')) {
+      return;
+    }
     const proj = this.extractProject();
     this.onProjectSyncCallbacks.forEach((cb) => cb(proj));
   }
@@ -373,7 +427,7 @@ export class DrafoCollaborationEngine {
   }
 
   public isConnected(): boolean {
-    return !!this.provider;
+    return !!(this.webrtcProvider || this.wsProvider);
   }
 
   public getYDoc(): Y.Doc {
