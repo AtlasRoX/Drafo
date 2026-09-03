@@ -14,7 +14,8 @@ import { AIFlowModal } from './components/Modals/AIFlowModal';
 import { KeyboardShortcutsModal } from './components/Modals/KeyboardShortcutsModal';
 import { ExportShareModal } from './components/Modals/ExportShareModal';
 import { CollaborationModal } from './components/Modals/CollaborationModal';
-import { collabEngine } from './crdt/yjsProvider';
+import { Users, X } from 'lucide-react';
+import { collabEngine, PeerPresence } from './crdt/yjsProvider';
 import {
   exportDiagramAsPng,
   exportDiagramAsSvg,
@@ -58,15 +59,14 @@ export const App: React.FC = () => {
   // View Router: 'dashboard' | 'editor'
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('dashboard');
 
-  // Multi-Project Database State (Starts with only user-created projects or 1 blank project)
+  // Multi-Project Database State (Starts empty if user has no saved projects)
   const [projects, setProjects] = useState<FlowProject[]>(() => {
-    if (typeof window === 'undefined') return [DEFAULT_BLANK_PROJECT];
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem(PROJECTS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Filter out unwanted pre-populated template IDs from past session
           const userOnly = parsed.filter(
             (p) =>
               p.id !== 'nextjs-16-architecture' &&
@@ -75,7 +75,8 @@ export const App: React.FC = () => {
               p.id !== 'ai-agent-rag-pipeline' &&
               p.id !== 'blank-canvas' &&
               p.id !== 'nextjs-api-flows-bengali' &&
-              p.id !== 'nextjs-api-flows-english'
+              p.id !== 'nextjs-api-flows-english' &&
+              p.id !== 'project-default'
           );
           if (userOnly.length > 0) return userOnly;
         }
@@ -83,13 +84,33 @@ export const App: React.FC = () => {
     } catch {
       // fallback
     }
-    return [DEFAULT_BLANK_PROJECT];
+    return [];
   });
 
   // Active Project for the Studio Editor
   const [project, setProject] = useState<FlowProject>(() => {
     return projects[0] || DEFAULT_BLANK_PROJECT;
   });
+
+  // Collaboration Session State & Live Indicators
+  const [collabRoomId, setCollabRoomId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#room=')) {
+      return decodeURIComponent(window.location.hash.replace('#room=', ''));
+    }
+    return collabEngine.getRoomId();
+  });
+  const [collabPeers, setCollabPeers] = useState<PeerPresence[]>(() => collabEngine.getRemotePeers());
+  const [collabToast, setCollabToast] = useState<{ message: string; visible: boolean }>({
+    message: '',
+    visible: false
+  });
+
+  const showCollabToast = (message: string) => {
+    setCollabToast({ message, visible: true });
+    setTimeout(() => {
+      setCollabToast((prev) => ({ ...prev, visible: false }));
+    }, 4000);
+  };
 
   // PGlite Embedded PostgreSQL Database Diagnostics State
   const [dbStatus, setDbStatus] = useState<{
@@ -149,22 +170,39 @@ export const App: React.FC = () => {
     const initDb = async () => {
       try {
         const pgs = await loadAllProjects();
-        if (isMounted && pgs.length > 0) {
-          setProjects(pgs);
-          setProject((curr) => {
-            const match = pgs.find((p) => p.id === curr.id);
-            return match || pgs[0];
-          });
+        if (isMounted) {
+          const userOnly = pgs.filter(
+            (p) =>
+              p.id !== 'nextjs-16-architecture' &&
+              p.id !== 'microservices-event-mesh' &&
+              p.id !== 'auth-jwt-lifecycle' &&
+              p.id !== 'ai-agent-rag-pipeline' &&
+              p.id !== 'blank-canvas' &&
+              p.id !== 'nextjs-api-flows-bengali' &&
+              p.id !== 'nextjs-api-flows-english' &&
+              p.id !== 'project-default'
+          );
+          if (userOnly.length > 0) {
+            setProjects(userOnly);
+            setProject((curr) => {
+              const match = userOnly.find((p) => p.id === curr.id);
+              return match || userOnly[0];
+            });
+          } else {
+            setProjects([]);
+          }
         }
         const diag = await getDatabaseDiagnostics();
         if (isMounted) setDbStatus(diag);
 
-        // Check for URL room hash (e.g. #room=team-alpha)
+        // Check for URL room hash (e.g. #room=room-12345)
         if (typeof window !== 'undefined' && window.location.hash.startsWith('#room=')) {
           const roomParam = decodeURIComponent(window.location.hash.replace('#room=', ''));
           if (roomParam) {
+            setCollabRoomId(roomParam);
             collabEngine.joinRoom(roomParam);
             setCurrentView('editor'); // Instantly open canvas editor for collaborators!
+            showCollabToast(`Connecting to room: ${roomParam}...`);
           }
         }
       } catch (err) {
@@ -177,15 +215,35 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Listen for live peer awareness changes & new joiners
+  useEffect(() => {
+    let lastPeerIds = new Set<number>();
+    const unsub = collabEngine.onPeersChange((peers) => {
+      setCollabPeers(peers);
+      setCollabRoomId(collabEngine.getRoomId());
+      peers.forEach((p) => {
+        if (!lastPeerIds.has(p.clientId)) {
+          showCollabToast(`👋 ${p.name} joined the live session!`);
+        }
+      });
+      lastPeerIds = new Set(peers.map((p) => p.clientId));
+    });
+    return unsub;
+  }, []);
+
   // Listen to hash changes in browser URL
   useEffect(() => {
     const handleHashChange = () => {
       if (typeof window !== 'undefined' && window.location.hash.startsWith('#room=')) {
         const roomParam = decodeURIComponent(window.location.hash.replace('#room=', ''));
         if (roomParam) {
+          setCollabRoomId(roomParam);
           collabEngine.joinRoom(roomParam);
           setCurrentView('editor');
+          showCollabToast(`Joined room: ${roomParam}`);
         }
+      } else {
+        setCollabRoomId(collabEngine.getRoomId());
       }
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -195,7 +253,7 @@ export const App: React.FC = () => {
   // Listen to remote CRDT project changes (via WebRTC or multi-tab BroadcastChannel)
   useEffect(() => {
     const unsub = collabEngine.onProjectSync((remoteProject) => {
-      if (remoteProject && (remoteProject.nodes.length > 0 || remoteProject.name)) {
+      if (remoteProject) {
         setProject(remoteProject);
         setProjects((prev) => {
           const exists = prev.some((p) => p.id === remoteProject.id);
@@ -1189,6 +1247,49 @@ export const App: React.FC = () => {
                     setActiveSimStep(null);
                   }}
                 />
+              )}
+
+              {/* Floating Live Collaboration Header Banner */}
+              {collabRoomId && (
+                <div className="drafo-viewport-live-banner">
+                  <div className="drafo-viewport-banner-left">
+                    <span className="drafo-collab-pulse-dot" />
+                    <span className="drafo-viewport-room-tag">LIVE: {collabRoomId}</span>
+                    <span className="drafo-viewport-peer-count">
+                      {collabPeers.length > 0
+                        ? `${collabPeers.length + 1} collaborators active`
+                        : 'Waiting for collaborators to open link...'}
+                    </span>
+                  </div>
+                  <div className="drafo-viewport-banner-right">
+                    <button
+                      className="drafo-viewport-invite-btn"
+                      onClick={() => setIsCollabModalOpen(true)}
+                    >
+                      <Users size={12} />
+                      <span>Invite</span>
+                    </button>
+                    <button
+                      className="drafo-viewport-leave-btn"
+                      onClick={() => {
+                        collabEngine.leaveRoom();
+                        setCollabRoomId(null);
+                        setCollabPeers([]);
+                      }}
+                      title="Leave collaboration room"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Toast when collaborators join or status updates */}
+              {collabToast.visible && (
+                <div className="drafo-collab-viewport-toast">
+                  <Users size={14} color="#10B981" />
+                  <span>{collabToast.message}</span>
+                </div>
               )}
             </main>
 

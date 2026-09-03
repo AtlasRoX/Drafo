@@ -35,6 +35,19 @@ function getRandomName(): string {
   return `${adj} ${noun}`;
 }
 
+/**
+ * Generate an always unique, collision-free collaboration room ID
+ */
+export function generateUniqueRoomId(): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let rand = '';
+  for (let i = 0; i < 6; i++) {
+    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const timestamp = Date.now().toString(36).slice(-4);
+  return `room-${rand}-${timestamp}`;
+}
+
 export class DrafoCollaborationEngine {
   private ydoc: Y.Doc;
   private provider: WebrtcProvider | null = null;
@@ -62,16 +75,29 @@ export class DrafoCollaborationEngine {
     this.currentRoomId = roomId;
 
     const signalingServers = [
-      'wss://signaling.yjs.dev',
-      'wss://y-webrtc-signaling-eu.herokuapp.com',
-      'wss://y-webrtc-signaling-us.herokuapp.com'
+      'wss://y-webrtc-signaling.fly.dev',
+      'wss://y-webrtc.fly.dev',
+      'wss://demos.yjs.dev/ws'
     ];
 
     try {
       this.provider = new WebrtcProvider(`drafo-room-${roomId}`, this.ydoc, {
         signaling: signalingServers,
         password: password && password.trim().length > 0 ? password.trim() : undefined,
-        filterBcConns: false // Keep BroadcastChannel enabled for instant multi-tab sync!
+        filterBcConns: false, // Keep BroadcastChannel enabled for instant multi-tab sync!
+        peerOpts: {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+              { urls: 'stun:stun3.l.google.com:19302' },
+              { urls: 'stun:stun4.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' },
+              { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+          }
+        }
       });
 
       // Set initial local presence in awareness
@@ -93,6 +119,19 @@ export class DrafoCollaborationEngine {
           this.notifyProjectSync();
         }
       });
+
+      // Listen for provider connection and sync events
+      this.provider.on('synced', (data: { synced: boolean }) => {
+        if (data && data.synced) {
+          this.notifyProjectSync();
+        }
+      });
+      this.provider.on('status', () => {
+        this.notifyPeersChange();
+      });
+      this.provider.on('peers', () => {
+        this.notifyPeersChange();
+      });
     } catch (err) {
       console.error('Failed to join WebRTC room:', err);
     }
@@ -107,6 +146,9 @@ export class DrafoCollaborationEngine {
       this.provider = null;
     }
     this.currentRoomId = null;
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#room=')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
     this.notifyPeersChange();
   }
 

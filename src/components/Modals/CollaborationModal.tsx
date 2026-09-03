@@ -22,7 +22,7 @@ import {
   Activity,
   Cpu
 } from 'lucide-react';
-import { collabEngine, PeerPresence } from '../../crdt/yjsProvider';
+import { collabEngine, PeerPresence, generateUniqueRoomId } from '../../crdt/yjsProvider';
 import { encryptDiagram, decryptDiagram } from '../../utils/cryptoVault';
 import { FlowProject } from '../../types/flow';
 import { createNetworkPolicy, ConnectionMode, NetworkPolicy } from '../../network/NetworkPolicy';
@@ -59,12 +59,10 @@ export const CollaborationModal: React.FC<CollaborationModalProps> = ({
     setCapabilities(detectCapabilities());
   }, []);
 
-  // P2P Room State - Default to an active room immediately!
-  const [roomId, setRoomId] = useState<string>(() => {
-    return collabEngine.getRoomId() || `room-${project.id.replace(/[^a-zA-Z0-9]/g, '').slice(-6) || Math.random().toString(36).substring(2, 8)}`;
-  });
+  // P2P Room State - Only active if already connected to a valid room
+  const [roomId, setRoomId] = useState<string>(() => collabEngine.getRoomId() || '');
   const [roomPassword, setRoomPassword] = useState<string>('');
-  const [isConnected, setIsConnected] = useState<boolean>(() => collabEngine.isConnected());
+  const [isConnected, setIsConnected] = useState<boolean>(() => collabEngine.isConnected() && !!collabEngine.getRoomId());
   const [peers, setPeers] = useState<PeerPresence[]>(() => collabEngine.getRemotePeers());
   const [copiedLink, setCopiedLink] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
@@ -80,32 +78,43 @@ export const CollaborationModal: React.FC<CollaborationModalProps> = ({
   const [vaultError, setVaultError] = useState<string | null>(null);
   const [vaultSuccess, setVaultSuccess] = useState<string | null>(null);
 
-  // Ensure active session on modal open
-  useEffect(() => {
-    if (!collabEngine.isConnected()) {
-      collabEngine.seedFromProject(project);
-      collabEngine.joinRoom(roomId, roomPassword);
-      setIsConnected(true);
-      if (typeof window !== 'undefined' && !window.location.hash) {
-        window.location.hash = `room=${encodeURIComponent(roomId)}`;
-      }
-    }
-  }, []);
-
   // Listen for live peer awareness changes
   useEffect(() => {
     const unsub = collabEngine.onPeersChange((updatedPeers) => {
       setPeers(updatedPeers);
-      setIsConnected(collabEngine.isConnected());
+      const activeId = collabEngine.getRoomId();
+      if (activeId) {
+        setRoomId(activeId);
+        setIsConnected(true);
+      }
     });
     return unsub;
   }, []);
 
-  const shareUrl = typeof window !== 'undefined'
+  // Start a fresh, unique collaborative session on demand
+  const handleStartSession = () => {
+    const uniqueRoom = generateUniqueRoomId();
+    setRoomId(uniqueRoom);
+    collabEngine.seedFromProject(project);
+    collabEngine.joinRoom(uniqueRoom, roomPassword);
+    setIsConnected(true);
+    if (typeof window !== 'undefined') {
+      window.location.hash = `room=${encodeURIComponent(uniqueRoom)}`;
+      const url = `${window.location.origin}${window.location.pathname}#room=${encodeURIComponent(uniqueRoom)}`;
+      navigator.clipboard.writeText(url).catch(() => {});
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
+  const shareUrl = typeof window !== 'undefined' && roomId
     ? `${window.location.origin}${window.location.pathname}#room=${encodeURIComponent(roomId.trim())}`
-    : `https://drafo.app/#room=${encodeURIComponent(roomId.trim())}`;
+    : typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}`
+    : 'https://drafo.app';
 
   const handleCopyLink = () => {
+    if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -138,7 +147,9 @@ export const CollaborationModal: React.FC<CollaborationModalProps> = ({
 
   const handleDisconnect = () => {
     collabEngine.leaveRoom();
+    setRoomId('');
     setIsConnected(false);
+    setPeers([]);
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', window.location.pathname);
     }
@@ -255,136 +266,228 @@ export const CollaborationModal: React.FC<CollaborationModalProps> = ({
         <div className="drafo-modal-body">
           {activeTab === 'p2p' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Share URL Card (Hero Component) */}
-              <div className="drafo-share-card">
-                <div className="drafo-share-card-header">
-                  <span style={{ fontSize: 12.5, color: '#0F172A', fontWeight: 700 }}>
-                    Invite Link
-                  </span>
-                  <span style={{ fontSize: 11.5, color: '#64748B', fontWeight: 600 }}>
-                    {peers.length > 0
-                      ? `${peers.length} collaborator${peers.length === 1 ? '' : 's'} connected`
-                      : 'Real-time collaborative link'}
-                  </span>
-                </div>
-
-                {/* Direct 1-Click Copy Link Input Row */}
-                <div className="drafo-share-input-row">
-                  <div className="drafo-share-input-wrapper">
-                    <Link2 size={16} color="#64748B" style={{ flexShrink: 0 }} />
-                    <input
-                      type="text"
-                      readOnly
-                      value={shareUrl}
-                      className="drafo-share-link-input"
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-                  </div>
-                  <button
-                    className={`drafo-figma-copy-btn ${copiedLink ? 'copied' : ''}`}
-                    onClick={handleCopyLink}
-                  >
-                    {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-                    <span>{copiedLink ? 'Copied Link!' : 'Copy link'}</span>
-                  </button>
-                </div>
-
-                <div className="drafo-share-hint">
-                  <Globe size={13} color="#64748B" />
-                  <span>Anyone with this link can view and co-edit on the canvas in real time.</span>
-                </div>
-              </div>
-
-              {/* Profile & Collaborators Split Grid */}
-              <div className="drafo-profile-grid">
-                {/* Left: Your Multiplayer Profile */}
-                <div className="drafo-card-section">
-                  <div className="drafo-card-section-title">
-                    <span>Your Presence & Cursor</span>
-                  </div>
-
-                  <div className="drafo-user-preview-row">
-                    <div
-                      className="drafo-user-avatar"
-                      style={{ backgroundColor: localProfile.color }}
-                    >
-                      {getInitials(localProfile.name)}
+              {!isConnected ? (
+                /* Pre-Session Setup & Launch Screen */
+                <div className="drafo-start-session-card">
+                  <div className="drafo-start-session-hero">
+                    <div className="drafo-start-session-badge">
+                      <Radio size={14} className="drafo-pulse-icon" />
+                      <span>Live P2P Multiplayer</span>
                     </div>
-                    <input
-                      type="text"
-                      value={nameInput}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="Your name..."
-                      className="drafo-figma-name-input"
-                      title="Click to change your display name"
-                    />
+                    <h3 className="drafo-start-session-title">Share Diagram & Collaborate Live</h3>
+                    <p className="drafo-start-session-desc">
+                      Click below to generate a unique collaborative room. Anyone with your link will join this canvas in real time with live cursors, peer presence indicators, and end-to-end synchronization.
+                    </p>
                   </div>
 
-                  {/* Figma Color Swatches */}
-                  <div>
-                    <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
-                      Cursor Color
-                    </span>
-                    <div className="drafo-color-palette">
-                      {FIGMA_CURSOR_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          className={`drafo-color-dot ${localProfile.color === c ? 'active' : ''}`}
-                          style={{ backgroundColor: c }}
-                          onClick={() => handleColorSelect(c)}
-                          title={`Select ${c}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Active Collaborators List */}
-                <div className="drafo-card-section">
-                  <div className="drafo-card-section-title">
-                    <span>Active Collaborators ({peers.length + 1})</span>
-                  </div>
-
-                  <div className="drafo-collaborators-list">
-                    {/* You */}
-                    <div className="drafo-peer-item">
-                      <div className="drafo-peer-left">
+                  {/* Profile & Cursor Customization Before Launching */}
+                  <div className="drafo-profile-grid" style={{ marginTop: 8 }}>
+                    <div className="drafo-card-section" style={{ width: '100%' }}>
+                      <div className="drafo-card-section-title">
+                        <span>Your Display Name & Cursor Color</span>
+                      </div>
+                      <div className="drafo-user-preview-row">
                         <div
-                          className="drafo-peer-avatar"
+                          className="drafo-user-avatar"
                           style={{ backgroundColor: localProfile.color }}
                         >
                           {getInitials(localProfile.name)}
                         </div>
-                        <span className="drafo-peer-name">{localProfile.name} (You)</span>
+                        <input
+                          type="text"
+                          value={nameInput}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder="Your name..."
+                          className="drafo-figma-name-input"
+                          title="Change your display name"
+                        />
                       </div>
-                      <span className="drafo-peer-status">Host</span>
+                      <div style={{ marginTop: 10 }}>
+                        <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                          Cursor Color
+                        </span>
+                        <div className="drafo-color-palette" style={{ marginTop: 6 }}>
+                          {FIGMA_CURSOR_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              className={`drafo-color-dot ${localProfile.color === c ? 'active' : ''}`}
+                              style={{ backgroundColor: c }}
+                              onClick={() => handleColorSelect(c)}
+                              title={`Select ${c}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Big Primary Start Button */}
+                  <button
+                    className="drafo-launch-session-btn"
+                    onClick={handleStartSession}
+                    title="Generate unique room and copy share link"
+                  >
+                    <Radio size={18} />
+                    <span>Start Live Session & Copy Link</span>
+                  </button>
+                </div>
+              ) : (
+                /* Active Live Session Screen */
+                <>
+                  {/* Share URL Card (Hero Component) */}
+                  <div className="drafo-share-card">
+                    <div className="drafo-share-card-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="drafo-live-pulse-dot" />
+                        <span style={{ fontSize: 12.5, color: '#0F172A', fontWeight: 700 }}>
+                          Room: {roomId}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 11.5, color: '#10B981', fontWeight: 700 }}>
+                        {peers.length > 0
+                          ? `${peers.length + 1} collaborators active`
+                          : 'Live (Waiting for collaborators)'}
+                      </span>
                     </div>
 
-                    {/* Remote Peers */}
-                    {peers.map((peer) => (
-                      <div key={peer.clientId} className="drafo-peer-item">
-                        <div className="drafo-peer-left">
-                          <div
-                            className="drafo-peer-avatar"
-                            style={{ backgroundColor: peer.color }}
-                          >
-                            {getInitials(peer.name)}
-                          </div>
-                          <span className="drafo-peer-name">{peer.name}</span>
-                        </div>
-                        <span className="drafo-peer-status">Online</span>
+                    {/* Direct 1-Click Copy Link Input Row */}
+                    <div className="drafo-share-input-row">
+                      <div className="drafo-share-input-wrapper">
+                        <Link2 size={16} color="#64748B" style={{ flexShrink: 0 }} />
+                        <input
+                          type="text"
+                          readOnly
+                          value={shareUrl}
+                          className="drafo-share-link-input"
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                        />
                       </div>
-                    ))}
+                      <button
+                        className={`drafo-figma-copy-btn ${copiedLink ? 'copied' : ''}`}
+                        onClick={handleCopyLink}
+                      >
+                        {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                        <span>{copiedLink ? 'Copied Link!' : 'Copy link'}</span>
+                      </button>
+                    </div>
 
-                    {peers.length === 0 && (
-                      <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '6px 0', fontStyle: 'italic' }}>
-                        Waiting for peers. Share the link above or open in another tab to test live collaboration!
-                      </p>
-                    )}
+                    <div className="drafo-share-hint">
+                      <Globe size={13} color="#64748B" />
+                      <span>Anyone with this link will immediately join this canvas in real time.</span>
+                    </div>
                   </div>
-                </div>
-              </div>
+
+                  {/* Profile & Collaborators Split Grid */}
+                  <div className="drafo-profile-grid">
+                    {/* Left: Your Multiplayer Profile */}
+                    <div className="drafo-card-section">
+                      <div className="drafo-card-section-title">
+                        <span>Your Presence & Cursor</span>
+                      </div>
+
+                      <div className="drafo-user-preview-row">
+                        <div
+                          className="drafo-user-avatar"
+                          style={{ backgroundColor: localProfile.color }}
+                        >
+                          {getInitials(localProfile.name)}
+                        </div>
+                        <input
+                          type="text"
+                          value={nameInput}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder="Your name..."
+                          className="drafo-figma-name-input"
+                          title="Click to change your display name"
+                        />
+                      </div>
+
+                      {/* Figma Color Swatches */}
+                      <div>
+                        <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                          Cursor Color
+                        </span>
+                        <div className="drafo-color-palette">
+                          {FIGMA_CURSOR_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              className={`drafo-color-dot ${localProfile.color === c ? 'active' : ''}`}
+                              style={{ backgroundColor: c }}
+                              onClick={() => handleColorSelect(c)}
+                              title={`Select ${c}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Active Collaborators List */}
+                    <div className="drafo-card-section">
+                      <div className="drafo-card-section-title">
+                        <span>Active Collaborators ({peers.length + 1})</span>
+                      </div>
+
+                      <div className="drafo-collaborators-list">
+                        {/* You */}
+                        <div className="drafo-peer-item">
+                          <div className="drafo-peer-left">
+                            <div
+                              className="drafo-peer-avatar"
+                              style={{ backgroundColor: localProfile.color }}
+                            >
+                              {getInitials(localProfile.name)}
+                            </div>
+                            <span className="drafo-peer-name">{localProfile.name} (You)</span>
+                          </div>
+                          <span className="drafo-peer-status host">Host</span>
+                        </div>
+
+                        {/* Remote Peers */}
+                        {peers.map((peer) => (
+                          <div key={peer.clientId} className="drafo-peer-item">
+                            <div className="drafo-peer-left">
+                              <div
+                                className="drafo-peer-avatar"
+                                style={{ backgroundColor: peer.color }}
+                              >
+                                {getInitials(peer.name)}
+                              </div>
+                              <span className="drafo-peer-name">{peer.name}</span>
+                            </div>
+                            <span className="drafo-peer-status online">Online</span>
+                          </div>
+                        ))}
+
+                        {peers.length === 0 && (
+                          <div className="drafo-waiting-peers-box">
+                            <span className="drafo-waiting-radar" />
+                            <p style={{ fontSize: 11.5, color: '#64748B', margin: 0 }}>
+                              Waiting for collaborators to open your link... Send them the link above!
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* End Session Button */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <span style={{ fontSize: 11.5, color: '#94A3B8' }}>
+                      P2P WebRTC DataChannel • E2E Encrypted
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      className="drafo-end-session-btn"
+                    >
+                      <X size={14} />
+                      <span>End Live Session</span>
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Advanced Room Controls Accordion */}
               <div>

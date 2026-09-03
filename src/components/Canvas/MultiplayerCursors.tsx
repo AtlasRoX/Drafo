@@ -49,14 +49,20 @@ export const MultiplayerCursors: React.FC<MultiplayerCursorsProps> = ({
               />
             </svg>
 
-            {/* Peer Username Badge */}
+            {/* Peer Username Badge with Live Indicator */}
             <div
               className="drafo-peer-name-badge"
               style={{
                 backgroundColor: peer.color
               }}
             >
+              <span className="drafo-peer-cursor-pulse-dot" />
               <span className="drafo-peer-name-text">{peer.name}</span>
+              {peer.selectedId && (
+                <span className="drafo-peer-selection-pill">
+                  Active
+                </span>
+              )}
             </div>
           </div>
         );

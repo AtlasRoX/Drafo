@@ -14,7 +14,7 @@
   top: 0;
   left: 0;
   pointer-events: none;
-  transition: transform 0.08s ease-out;
+  transition: transform 0.04s cubic-bezier(0, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -22,19 +22,29 @@
 }
 
 .drafo-peer-cursor-arrow {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
   transform-origin: top left;
 }
 
 .drafo-peer-name-badge {
   margin-top: 2px;
   margin-left: 12px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 9999px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   white-space: nowrap;
+}
+
+.drafo-peer-cursor-pulse-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  opacity: 0.9;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
 .drafo-peer-name-text {
@@ -44,3 +54,15 @@
   letter-spacing: 0.02em;
   user-select: none;
 }
+
+.drafo-peer-selection-pill {
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.28);
+  color: #FFFFFF;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+

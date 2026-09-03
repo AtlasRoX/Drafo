@@ -196,16 +196,18 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         {/* Projects Grid */}
         <div className="drafo-dash-projects-grid">
           {/* New Blank Diagram Card */}
-          <div
-            className="drafo-new-project-card"
-            onClick={() => onCreateProject()}
-            title="Create a new diagram"
-          >
-            <div className="drafo-new-project-icon-wrap">
-              <Plus size={22} />
+          {projects.length > 0 && (
+            <div
+              className="drafo-new-project-card"
+              onClick={() => onCreateProject()}
+              title="Create a new diagram"
+            >
+              <div className="drafo-new-project-icon-wrap">
+                <Plus size={22} />
+              </div>
+              <span className="drafo-new-project-label">New Diagram</span>
             </div>
-            <span className="drafo-new-project-label">New Diagram</span>
-          </div>
+          )}
 
           {/* Project Cards */}
           {filteredProjects.map((project) => {
@@ -333,8 +335,23 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             );
           })}
 
-          {/* Empty Search State */}
-          {filteredProjects.length === 0 && (
+          {/* Welcome / Empty State when no diagrams have been created */}
+          {projects.length === 0 ? (
+            <div className="drafo-dash-empty-state">
+              <FolderOpen size={40} color="#2563EB" />
+              <div className="drafo-empty-title">Welcome to Drafo</div>
+              <div className="drafo-empty-sub">
+                No diagrams created yet. Start with a blank canvas or create your first architecture model.
+              </div>
+              <button
+                className="drafo-dash-btn primary"
+                onClick={() => onCreateProject()}
+              >
+                <Plus size={16} />
+                <span>Create First Diagram</span>
+              </button>
+            </div>
+          ) : filteredProjects.length === 0 && (
             <div className="drafo-dash-empty-state">
               <FolderOpen size={36} color="#94A3B8" />
               <div className="drafo-empty-title">No diagrams found</div>

@@ -16,7 +16,7 @@ import {
   Sparkles,
   Users
 } from 'lucide-react';
-import { collabEngine } from '../../crdt/yjsProvider';
+import { collabEngine, PeerPresence } from '../../crdt/yjsProvider';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -50,11 +50,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onImportJson,
   onCopyClipboard
 }) => {
-  const [peerCount, setPeerCount] = useState<number>(() => collabEngine.getRemotePeers().length);
+  const [peers, setPeers] = useState<PeerPresence[]>(() => collabEngine.getRemotePeers());
+  const [currentRoom, setCurrentRoom] = useState<string | null>(() => collabEngine.getRoomId());
+  const [localUser, setLocalUser] = useState(() => collabEngine.getLocalUserProfile());
 
   React.useEffect(() => {
-    const unsub = collabEngine.onPeersChange((peers) => {
-      setPeerCount(peers.length);
+    const unsub = collabEngine.onPeersChange((newPeers) => {
+      setPeers(newPeers);
+      setCurrentRoom(collabEngine.getRoomId());
+      setLocalUser(collabEngine.getLocalUserProfile());
     });
     return unsub;
   }, []);
@@ -154,17 +158,56 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>AI Flow</span>
         </button>
 
-        {/* Live P2P Collaboration & Vault Button */}
+        {/* Live P2P Collaboration, Avatars & Share Button */}
         {onOpenCollaboration && (
-          <button
-            className={`drafo-nav-btn collab-nav-btn ${peerCount > 0 ? 'is-live' : ''}`}
-            onClick={onOpenCollaboration}
-            title="P2P Multiplayer Collaboration & E2E Encrypted Vault"
-          >
-            <Users size={14} />
-            <span>{peerCount > 0 ? `Collab (${peerCount + 1})` : 'Live Collab'}</span>
-            {peerCount > 0 && <span className="drafo-collab-pulse-dot" />}
-          </button>
+          <div className="drafo-nav-collab-group">
+            {currentRoom && (
+              <div
+                className="drafo-nav-active-room-pill"
+                onClick={onOpenCollaboration}
+                title={`Live Room: ${currentRoom} (Click to view session & copy link)`}
+              >
+                <span className="drafo-collab-pulse-dot" />
+                <span className="drafo-nav-room-text">{currentRoom}</span>
+              </div>
+            )}
+
+            {/* Collaborator Avatars (Local User + Remote Peers) */}
+            {currentRoom && (
+              <div
+                className="drafo-nav-avatar-stack"
+                onClick={onOpenCollaboration}
+                title="Active Collaborators in this diagram"
+              >
+                <div
+                  className="drafo-nav-avatar-circle local"
+                  style={{ backgroundColor: localUser.color }}
+                  title={`${localUser.name} (You)`}
+                >
+                  {localUser.name.slice(0, 1).toUpperCase()}
+                </div>
+                {peers.map((peer) => (
+                  <div
+                    key={peer.clientId}
+                    className="drafo-nav-avatar-circle"
+                    style={{ backgroundColor: peer.color }}
+                    title={`${peer.name} (Online)`}
+                  >
+                    {peer.name.slice(0, 1).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              className={`drafo-nav-btn collab-nav-btn ${currentRoom ? 'is-live' : ''}`}
+              onClick={onOpenCollaboration}
+              title="P2P Multiplayer Collaboration"
+            >
+              <Users size={14} />
+              <span>{currentRoom ? `Share (${peers.length + 1})` : 'Share Session'}</span>
+            </button>
+          </div>
         )}
 
         {/* Export Dropdown */}
