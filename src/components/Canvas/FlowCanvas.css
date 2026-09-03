@@ -1,0 +1,1493 @@
+/* Drafo Canvas & Nodes Stylesheet */
+
+.drafo-flow-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  background-color: #FAFAFC;
+  cursor: default;
+}
+
+.drafo-flow-canvas-container.mode-select {
+  cursor: default;
+}
+
+.drafo-flow-canvas-container.mode-hand {
+  cursor: grab;
+}
+
+.drafo-flow-canvas-container.mode-hand.panning,
+.drafo-flow-canvas-container.panning {
+  cursor: grabbing !important;
+}
+
+.drafo-flow-canvas-container.space-grab {
+  cursor: grab !important;
+}
+
+/* Adaptive Grid Backgrounds */
+.drafo-flow-canvas-container.dots,
+.drafo-flow-canvas-container.lines {
+  background-repeat: repeat;
+}
+
+.drafo-canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.drafo-canvas-content > * {
+  pointer-events: auto;
+}
+
+.drafo-canvas-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.drafo-canvas-svg .drafo-flow-edge,
+.drafo-canvas-svg .drafo-edge-hitbox,
+.drafo-canvas-svg .drafo-edge-label-group,
+.drafo-canvas-svg .drafo-edge-input-container {
+  pointer-events: auto;
+}
+
+.drafo-marquee-group,
+.drafo-marquee-rect,
+.drafo-smart-guide {
+  pointer-events: none;
+}
+
+/* Floating Navigation HUD */
+.drafo-canvas-floating-hud {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  z-index: 50;
+}
+
+.drafo-hud-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-hud-btn:hover:not(:disabled) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.drafo-hud-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.drafo-hud-btn.drafo-hud-play-btn.active {
+  background-color: #0F172A;
+  color: #FFFFFF;
+}
+
+.drafo-hud-zoom-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  padding: 0 6px;
+  cursor: pointer;
+  min-width: 44px;
+  text-align: center;
+  user-select: none;
+}
+
+.drafo-hud-zoom-text:hover {
+  color: #2563EB;
+}
+
+.drafo-hud-divider {
+  width: 1px;
+  height: 16px;
+  background-color: #E2E8F0;
+  margin: 0 2px;
+}
+
+/* ==========================================================================
+   FLOW NODES BASE STYLING
+   ========================================================================== */
+
+.drafo-flow-node {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  z-index: 20;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.drafo-flow-node:active {
+  cursor: grabbing;
+}
+
+.drafo-flow-node.selected {
+  outline: 2px solid #2563EB;
+  outline-offset: 3px;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+}
+
+.drafo-flow-node.sim-pulse {
+  animation: simGlow 1.2s infinite alternate;
+}
+
+@keyframes simGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+}
+
+/* Standard Process Cards */
+.drafo-node-standard-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: inherit;
+  border-radius: inherit;
+  user-select: none;
+  overflow: hidden;
+}
+
+.drafo-node-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.drafo-node-title {
+  font-family: 'Plus Jakarta Sans', 'Outfit', 'Google Sans', sans-serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.3;
+  color: #0F172A;
+  word-break: break-word;
+}
+
+.drafo-node-subtitle-pill {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #475569;
+  background: #F8FAFC;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #E2E8F0;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+  align-self: flex-start;
+}
+
+.drafo-node-subtitle {
+  font-family: 'Plus Jakarta Sans', 'Outfit', 'Google Sans', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #64748B;
+  margin-top: 3px;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   BROWSER WINDOW MOCKUP NODE
+   ========================================================================== */
+
+.drafo-node-browser-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.drafo-browser-header {
+  height: 22px;
+  width: 100%;
+  background-color: #2563EB;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.drafo-browser-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.drafo-browser-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  opacity: 0.85;
+}
+
+.drafo-browser-body {
+  flex: 1;
+  display: flex;
+  padding: 8px;
+  gap: 8px;
+  background-color: #FFFFFF;
+}
+
+.drafo-browser-sidebar-preview {
+  width: 32px;
+  height: 100%;
+  background-color: #93C5FD;
+  border-radius: 4px;
+}
+
+.drafo-browser-content-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.drafo-preview-line {
+  height: 4px;
+  background-color: #93C5FD;
+  border-radius: 2px;
+}
+
+.drafo-preview-line.line-wide {
+  width: 85%;
+}
+
+.drafo-preview-line.line-mid {
+  width: 65%;
+}
+
+.drafo-preview-line.line-short {
+  width: 45%;
+}
+
+.drafo-browser-caption {
+  position: absolute;
+  bottom: -26px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.drafo-browser-caption .drafo-node-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+/* ==========================================================================
+   DATABASE 3D CYLINDER NODE (Mathematically Perfect SVG Vector)
+   ========================================================================== */
+
+.drafo-node-db-perfect-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+}
+
+.drafo-db-perfect-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  filter: drop-shadow(0 4px 12px rgba(147, 51, 234, 0.08));
+}
+
+.drafo-db-perfect-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  text-align: center;
+  max-width: 90%;
+  overflow: hidden;
+}
+
+.drafo-db-icon-pill {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.db-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Selected Node State */
+.drafo-flow-node.selected {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.18);
+}
+
+/* ==========================================================================
+   ADVANCED NODE VARIANTS (Mobile, Desktop, Terminal, Decision, Note, Cache)
+   ========================================================================== */
+
+/* 1. Ultra-Clean Smartphone Mobile Node */
+.drafo-node-mobile-inner {
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF;
+  border: 2px solid #1E293B;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  position: relative;
+  user-select: none;
+}
+
+.drafo-mobile-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px 0 10px;
+  height: 18px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #1E293B;
+  position: relative;
+}
+
+.drafo-mobile-island {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 9px;
+  background-color: #0F172A;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+.drafo-mobile-island-lens {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background-color: #1E293B;
+}
+
+.drafo-mobile-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 10px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.drafo-mobile-home-bar {
+  width: 40px;
+  height: 3.5px;
+  background-color: #0F172A;
+  border-radius: 2px;
+  margin: 0 auto 4px auto;
+  opacity: 0.8;
+}
+
+/* 2. Desktop App Window Node (Matching Web Client aesthetic) */
+.drafo-node-desktop-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border: 1.5px solid #475569;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(71, 85, 105, 0.08);
+}
+
+.drafo-desktop-header {
+  height: 22px;
+  width: 100%;
+  background-color: #475569;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.drafo-desktop-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.drafo-desktop-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  opacity: 0.9;
+}
+
+.drafo-desktop-body {
+  flex: 1;
+  display: flex;
+  padding: 8px;
+  gap: 8px;
+  background-color: #FFFFFF;
+}
+
+.drafo-desktop-sidebar-preview {
+  width: 28px;
+  height: 100%;
+  background-color: #CBD5E1;
+  border-radius: 4px;
+}
+
+.drafo-desktop-content-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* 3. Developer Terminal CLI Node (Matching Web Client aesthetic) */
+.drafo-node-terminal-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border: 1.5px solid #0F172A;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.drafo-terminal-header {
+  height: 22px;
+  width: 100%;
+  background-color: #0F172A;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.drafo-terminal-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.drafo-terminal-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  opacity: 0.9;
+}
+
+.drafo-terminal-body {
+  flex: 1;
+  display: flex;
+  padding: 8px 12px;
+  background-color: #FFFFFF;
+}
+
+.drafo-terminal-content-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.drafo-terminal-prompt-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.drafo-terminal-icon-prompt {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #0F172A;
+}
+
+/* 4. Decision Diamond Node */
+.drafo-node-decision-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  text-align: center;
+}
+
+/* 5. Sticky Note Node */
+.drafo-node-note-inner {
+  width: 100%;
+  height: 100%;
+  background-color: #FEFCE8;
+  border: 1px solid #FDE047;
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.drafo-note-pin {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #EF4444;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 6. Cloud VPC / Region Component */
+.drafo-node-cloud-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+}
+
+.drafo-cloud-perfect-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  filter: drop-shadow(0 4px 14px rgba(99, 102, 241, 0.09));
+}
+
+.drafo-cloud-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  text-align: center;
+  max-width: 85%;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.drafo-cloud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2.5px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ==========================================================================
+   INTERACTIVE RESIZE HANDLES (8 POINTS FOR ALL NODES)
+   ========================================================================== */
+
+.drafo-node-resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 2px;
+  z-index: 35;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+
+.drafo-node-resize-handle:hover {
+  background-color: #2563EB;
+  transform: scale(1.3);
+}
+
+.drafo-node-resize-handle.handle-nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.drafo-node-resize-handle.handle-n {
+  top: -4px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+
+.drafo-node-resize-handle.handle-ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.drafo-node-resize-handle.handle-e {
+  top: calc(50% - 4px);
+  right: -4px;
+  cursor: ew-resize;
+}
+
+.drafo-node-resize-handle.handle-se {
+  bottom: -4px;
+  right: -4px;
+  cursor: nwse-resize;
+}
+
+.drafo-node-resize-handle.handle-s {
+  bottom: -4px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+
+.drafo-node-resize-handle.handle-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.drafo-node-resize-handle.handle-w {
+  top: calc(50% - 4px);
+  left: -4px;
+  cursor: ew-resize;
+}
+
+/* Node Header Badges & Metrics */
+.drafo-node-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 5px;
+  gap: 6px;
+}
+
+.drafo-node-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.drafo-node-icon-box {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.drafo-node-type-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafo-node-type-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.drafo-node-metric-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.drafo-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.drafo-status-dot.online {
+  background-color: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.drafo-status-dot.busy {
+  background-color: #F59E0B;
+}
+
+.drafo-status-dot.error {
+  background-color: #EF4444;
+}
+
+.drafo-status-dot.idle {
+  background-color: #94A3B8;
+}
+
+/* ==========================================================================
+   CONNECTION PORTS
+   ========================================================================== */
+
+.drafo-node-ports {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.drafo-port {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background-color: #FFFFFF;
+  border: 2px solid #2563EB;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: crosshair;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  z-index: 55;
+}
+
+/* Generous 27px hit area so users can easily click or drag from the dot instantly */
+.drafo-port::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+.drafo-flow-node:hover .drafo-port,
+.drafo-flow-node.selected .drafo-port {
+  opacity: 0.95;
+}
+
+.drafo-port:hover {
+  opacity: 1 !important;
+  transform: translate(-50%, -50%) scale(1.35);
+  background-color: #2563EB;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+.drafo-port.port-top {
+  top: 0%;
+  left: 50%;
+}
+
+.drafo-port.port-right {
+  top: 50%;
+  left: 100%;
+}
+
+.drafo-port.port-bottom {
+  top: 100%;
+  left: 50%;
+}
+
+.drafo-port.port-left {
+  top: 50%;
+  left: 0%;
+}
+
+/* ==========================================================================
+   FLOW CONNECTORS / EDGES
+   ========================================================================== */
+
+.drafo-flow-edge {
+  cursor: pointer;
+}
+
+.drafo-edge-path {
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.drafo-flow-edge:hover .drafo-edge-path {
+  stroke: #2563EB !important;
+  stroke-width: 2.5px !important;
+}
+
+.drafo-edge-label-group text {
+  font-family: 'Plus Jakarta Sans', 'Outfit', 'Google Sans', 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.drafo-edge-label-text-bg {
+  fill: none;
+  stroke: #FFFFFF;
+  stroke-width: 6px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.drafo-edge-label-text {
+  fill: #000000;
+}
+
+.drafo-flow-edge.selected .drafo-edge-label-text {
+  fill: #2563EB;
+  font-weight: 700;
+}
+
+.drafo-edge-input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.drafo-edge-inline-input {
+  width: 90%;
+  background: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ==========================================================================
+   SECTION HEADERS
+   ========================================================================== */
+
+.drafo-section-header {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1200px;
+  display: flex;
+  align-items: center;
+  z-index: 15;
+  cursor: grab;
+  user-select: none;
+}
+
+.drafo-section-header:active {
+  cursor: grabbing;
+}
+
+.drafo-section-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid #81C784;
+  background-color: #DCF0DC;
+  color: #1F5E21;
+  font-family: 'Plus Jakarta Sans', 'Outfit', 'Google Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: grab;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.drafo-section-pill:active {
+  cursor: grabbing;
+  transform: scale(1.02);
+}
+
+.drafo-section-drag-handle {
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.drafo-section-header.selected .drafo-section-pill {
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #2563EB;
+}
+
+.drafo-section-divider {
+  flex: 1;
+  height: 1.5px;
+  background-color: #94A3B8;
+  margin-left: 20px;
+  opacity: 0.6;
+}
+
+.drafo-section-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  width: 220px;
+}
+
+/* Inline node text inputs */
+.drafo-inline-input {
+  background: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  width: 90%;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.15);
+}
+
+.drafo-inline-textarea {
+  background: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-size: 11.5px;
+  text-align: center;
+  outline: none;
+  width: 95%;
+  resize: none;
+  margin-top: 4px;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.15);
+}
+
+/* Smart Magnetic Alignment Guides */
+.drafo-smart-guide {
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(236, 72, 153, 0.6));
+  animation: smartGuidePulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes smartGuidePulse {
+  from { opacity: 0.85; }
+  to { opacity: 1; }
+}
+
+/* Marquee Selection Bounding Box */
+.drafo-marquee-group {
+  pointer-events: none;
+}
+
+.drafo-marquee-rect {
+  fill: rgba(37, 99, 235, 0.08);
+  stroke: #2563EB;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  rx: 4;
+}
+
+/* Container & Subnet Zone Node Styles */
+.drafo-flow-node.is-container-node {
+  background: rgba(37, 99, 235, 0.02);
+  border-style: dashed;
+  cursor: grab;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.drafo-flow-node.is-container-node:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.drafo-flow-node.is-container-node.selected {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+}
+
+.drafo-node-container-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.drafo-container-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  user-select: none;
+}
+
+.drafo-container-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #2563EB;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.drafo-container-title {
+  cursor: text;
+}
+
+.drafo-container-tag {
+  font-size: 10px;
+  font-weight: 600;
+  background-color: rgba(37, 99, 235, 0.12);
+  color: #1D4ED8;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Magnetic Port Suction Animation */
+.drafo-port-suction-group {
+  pointer-events: none;
+}
+
+.drafo-port-suction-outer {
+  fill: rgba(37, 99, 235, 0.2);
+  stroke: #2563EB;
+  stroke-width: 1.5;
+  animation: portSuctionPulse 0.6s ease-in-out infinite alternate;
+}
+
+.drafo-port-suction-inner {
+  fill: #2563EB;
+  animation: portSuctionCore 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes portSuctionPulse {
+  from {
+    r: 10px;
+    opacity: 0.7;
+  }
+  to {
+    r: 15px;
+    opacity: 1;
+  }
+}
+
+@keyframes portSuctionCore {
+  from {
+    r: 5px;
+  }
+  to {
+    r: 7px;
+  }
+}
+
+/* Live Coordinate & Dimension Micro-HUD */
+.drafo-live-coords-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: bottom center;
+  translate: -50% -100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: #0F172A;
+  color: #F8FAFC;
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+  animation: hudPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drafo-live-coords-hud .dim {
+  color: #94A3B8;
+  border-left: 1px solid #334155;
+  padding-left: 6px;
+}
+
+@keyframes hudPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Edge Hover Glowing Tube & Quick Actions */
+.drafo-edge-glow-path {
+  pointer-events: none;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.drafo-edge-action-pill {
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.drafo-edge-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 2px 4px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+.drafo-edge-action-btn {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.drafo-edge-action-btn:hover {
+  background-color: #EEF2FF;
+  color: #2563EB;
+}
+
+.drafo-edge-action-btn.delete:hover {
+  background-color: #FEE2E2;
+  color: #EF4444;
+}
+
+/* Animated Edge Flow */
+.drafo-edge-path.is-animated {
+  animation: drafoFlowDash 1.2s linear infinite;
+}
+
+@keyframes drafoFlowDash {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Simulation Target Glow Pulse */
+.drafo-flow-node.sim-target-pulse {
+  outline: 2.5px solid #10B981 !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.45) !important;
+  transition: all 0.3s ease;
+}
+
+/* Locked Node indicator */
+.drafo-flow-node.is-locked {
+  cursor: default !important;
+}
+
+.drafo-flow-node.is-locked:hover {
+  outline: 1.5px dashed #94A3B8 !important;
+}
+
+.drafo-lock-indicator-badge {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  background: #1E293B;
+  color: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+/* Node Tag Chips */
+.drafo-node-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.drafo-node-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563EB;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  line-height: 1.2;
+}
+
+/* Canvas Quick Search Dialog */
+.drafo-canvas-search-modal {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+  z-index: 99;
+  overflow: hidden;
+  animation: drafoSearchFadeIn 0.18s ease-out;
+}
+
+@keyframes drafoSearchFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.drafo-canvas-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.drafo-canvas-search-icon {
+  color: #64748B;
+  flex-shrink: 0;
+}
+
+.drafo-canvas-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0F172A;
+}
+
+.drafo-canvas-search-input::placeholder {
+  color: #94A3B8;
+}
+
+.drafo-canvas-search-close {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.drafo-canvas-search-close:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.drafo-canvas-search-results {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drafo-canvas-search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.drafo-canvas-search-result-item:hover {
+  background: #F8FAFC;
+}
+
+.drafo-search-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drafo-search-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafo-search-item-sub {
+  font-size: 11px;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafo-search-item-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94A3B8;
+  background: #F1F5F9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+

@@ -1,0 +1,1304 @@
+/* Drafo Modals Stylesheet */
+
+.drafo-modal-overlay,
+.drafo-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: modalFadeIn 0.15s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drafo-modal-container {
+  width: 90%;
+  max-width: 620px;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 10000;
+}
+
+.drafo-modal-container.drafo-collab-modal {
+  max-width: 660px;
+}
+
+.drafo-modal-container.ai-modal {
+  max-width: 680px;
+}
+
+.drafo-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drafo-modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #EEF2FF;
+  color: #4F46E5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drafo-modal-subtitle {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+.drafo-modal-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 8px;
+}
+
+@keyframes modalScaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.drafo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drafo-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.drafo-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-modal-close:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.drafo-modal-desc {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Template Grid */
+.drafo-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.drafo-template-card {
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background-color: #FAFAFC;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drafo-template-card:hover {
+  border-color: #2563EB;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
+}
+
+.drafo-template-card.active {
+  border-color: #2563EB;
+  background-color: #EFF6FF;
+}
+
+.drafo-template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drafo-template-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.drafo-current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background-color: #2563EB;
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.drafo-template-desc {
+  font-size: 12px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.drafo-template-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* AI Studio Modal Styles */
+.drafo-modal-container.ai-studio-modal {
+  position: relative;
+  max-width: 720px;
+  width: 95%;
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  padding: 24px;
+  gap: 18px;
+  overflow: hidden;
+}
+
+.drafo-ai-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.drafo-ai-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.drafo-ai-badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #533bf5 0%, #8c3df5 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(110, 60, 245, 0.3);
+  flex-shrink: 0;
+}
+
+.drafo-ai-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drafo-ai-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+}
+
+.drafo-ai-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.drafo-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-modal-close-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* Prompt Composer */
+.drafo-ai-composer {
+  position: relative;
+  z-index: 1;
+  background: #F8FAFC;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.drafo-ai-composer:focus-within {
+  border-color: #4F46E5;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.drafo-ai-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #0F172A;
+  resize: none;
+}
+
+.drafo-ai-textarea::placeholder {
+  color: #94A3B8;
+}
+
+.drafo-ai-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.drafo-ai-lang-toggle {
+  display: flex;
+  gap: 2px;
+  background: #F1F5F9;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.drafo-lang-btn {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drafo-lang-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.drafo-ai-shortcut-hint {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.drafo-ai-shortcut-hint kbd {
+  font-size: 10.5px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #475569;
+}
+
+/* Generating Overlay */
+.drafo-ai-generating-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 100;
+  border-radius: 18px;
+  animation: modalFadeIn 0.2s ease;
+}
+
+.drafo-ai-spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+}
+
+.drafo-spinning-icon {
+  animation: pulseRotate 1.5s infinite linear;
+}
+
+@keyframes pulseRotate {
+  0% { transform: rotate(0deg) scale(0.95); }
+  50% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(0.95); }
+}
+
+.drafo-ai-step-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+}
+
+.drafo-ai-progress-bar {
+  width: 220px;
+  height: 5px;
+  background: #E2E8F0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.drafo-ai-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Footer Actions */
+.drafo-ai-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.drafo-btn-secondary {
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-btn-secondary:hover:not(:disabled) {
+  background: #F8FAFC;
+  color: #0F172A;
+}
+
+.drafo-btn-primary.drafo-ai-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #533bf5 0%, #8c3df5 100%);
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.drafo-btn-primary.drafo-ai-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4830eb 0%, #8030eb 100%);
+}
+
+.drafo-btn-primary.drafo-ai-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Visual Export Studio Modal Styles --- */
+.drafo-modal-container.visual-export-modal {
+  max-width: 960px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.drafo-export-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 8px;
+}
+
+.drafo-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-tab-btn:hover {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+.drafo-tab-btn.active {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+  border-color: #C7D2FE;
+}
+
+.drafo-export-body {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  min-height: 380px;
+  overflow: hidden;
+}
+
+.drafo-export-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 6px;
+  max-height: 480px;
+}
+
+.drafo-export-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drafo-control-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.drafo-pill-selector {
+  display: flex;
+  background-color: #F1F5F9;
+  padding: 3px;
+  border-radius: 8px;
+  gap: 3px;
+}
+
+.drafo-pill-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-pill-option:hover:not(:disabled) {
+  color: #0F172A;
+}
+
+.drafo-pill-option.active {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.drafo-pill-option.disabled,
+.drafo-pill-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.drafo-pill-selector.small .drafo-pill-option {
+  padding: 5px 8px;
+  font-size: 11.5px;
+}
+
+.drafo-bg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.drafo-bg-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-bg-option:hover {
+  border-color: #CBD5E1;
+  background-color: #F8FAFC;
+}
+
+.drafo-bg-option.active {
+  border-color: #4F46E5;
+  background-color: #EEF2FF;
+}
+
+.drafo-bg-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.drafo-bg-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafo-export-row {
+  display: flex;
+  gap: 12px;
+}
+
+.drafo-export-control-group.half {
+  flex: 1;
+}
+
+.drafo-export-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #F8FAFC;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.drafo-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.drafo-checkbox-row input {
+  cursor: pointer;
+  accent-color: #4F46E5;
+}
+
+/* Preview Area */
+.drafo-export-preview-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #0B0F19;
+  border-radius: 12px;
+  border: 1px solid #1E293B;
+  overflow: hidden;
+  min-height: 380px;
+}
+
+.drafo-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background-color: #111827;
+  border-bottom: 1px solid #1F2937;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9CA3AF;
+}
+
+.drafo-preview-meta {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.drafo-preview-viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+  max-height: 440px;
+}
+
+.drafo-preview-card {
+  transition: all 0.2s ease;
+  max-width: 100%;
+}
+
+.drafo-preview-card.has-shadow {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+}
+
+/* Code Output Tab */
+.drafo-export-code-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 380px;
+}
+
+.drafo-code-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drafo-code-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.drafo-code-hint {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.drafo-code-output {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 16px;
+  background-color: #0F172A;
+  color: #38BDF8;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.drafo-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.drafo-footer-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.drafo-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drafo-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-btn-secondary:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.drafo-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.drafo-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1D4ED8 0%, #4338CA 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   FIGMA-GRADE COLLABORATION & SHARE MODAL STYLES
+   ========================================================= */
+
+.drafo-collab-header-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.drafo-collab-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drafo-collab-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  color: #4F46E5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
+  flex-shrink: 0;
+}
+
+.drafo-collab-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.drafo-collab-desc {
+  font-size: 13px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+/* Figma Segmented Tab Bar */
+.drafo-segmented-tabs {
+  display: flex;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.drafo-segmented-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drafo-segmented-tab:hover:not(.active) {
+  color: #0F172A;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.drafo-segmented-tab.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Share URL Card */
+.drafo-share-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drafo-share-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drafo-share-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+  background: #ECFDF5;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #A7F3D0;
+}
+
+.drafo-live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+  animation: collabDotPulse 1.8s infinite;
+}
+
+.drafo-share-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.drafo-share-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 42px;
+  transition: all 0.15s ease;
+}
+
+.drafo-share-input-wrapper:focus-within {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.drafo-share-link-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  color: #0F172A;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+
+.drafo-figma-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: none;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.drafo-figma-copy-btn:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.drafo-figma-copy-btn.copied {
+  background: #059669;
+}
+
+.drafo-share-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748B;
+}
+
+/* User Profile & Colors Grid */
+.drafo-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.drafo-card-section {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drafo-card-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drafo-user-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drafo-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.drafo-figma-name-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.drafo-figma-name-input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.drafo-color-palette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.drafo-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-shadow: 0 0 0 1px #CBD5E1;
+}
+
+.drafo-color-dot:hover {
+  transform: scale(1.18);
+}
+
+.drafo-color-dot.active {
+  box-shadow: 0 0 0 2px #0F172A;
+  transform: scale(1.2);
+}
+
+/* Collaborators list */
+.drafo-collaborators-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.drafo-peer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.drafo-peer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drafo-peer-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drafo-peer-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.drafo-peer-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10B981;
+}
+
+/* Vault Styles */
+.drafo-vault-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drafo-vault-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #1E40AF;
+  line-height: 1.45;
+}
+
+.drafo-vault-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drafo-vault-input-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.drafo-vault-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  background: #FFFFFF;
+  padding: 0 12px;
+  height: 42px;
+  transition: all 0.15s ease;
+}
+
+.drafo-vault-input-wrapper:focus-within {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.drafo-vault-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #0F172A;
+}
+
+.drafo-vault-eye-btn {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.drafo-vault-eye-btn:hover {
+  color: #0F172A;
+}
+
+.drafo-vault-actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.drafo-vault-btn-primary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.drafo-vault-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1D4ED8 0%, #4338CA 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.drafo-vault-btn-secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-vault-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+  transform: translateY(-1px);
+}
+
+.drafo-vault-meta-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.drafo-vault-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748B;
+  background: #E2E8F0;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+

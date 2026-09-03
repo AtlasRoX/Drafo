@@ -1,0 +1,348 @@
+/* Drafo Property Inspector Stylesheet */
+
+.drafo-inspector-panel {
+  width: 290px;
+  height: 100%;
+  background-color: #FFFFFF;
+  border-left: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
+  z-index: 40;
+  flex-shrink: 0;
+  transition: width 0.2s ease, transform 0.2s ease;
+}
+
+/* Collapsed Tab (Icon Only) */
+.drafo-inspector-collapsed-tab {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: #334155;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  z-index: 45;
+  transition: all 0.15s ease;
+}
+
+.drafo-inspector-collapsed-tab:hover {
+  background: #F8FAFC;
+  color: #2563EB;
+  border-color: #93C5FD;
+}
+
+.drafo-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.drafo-inspector-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.drafo-inspector-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.drafo-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-icon-btn:hover {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.drafo-icon-btn.delete-btn:hover {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border-color: #FECACA;
+}
+
+.drafo-inspector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drafo-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drafo-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drafo-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.drafo-input:focus {
+  border-color: #2563EB;
+}
+
+.drafo-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #0F172A;
+  background-color: #F8FAFC;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.drafo-textarea:focus {
+  border-color: #2563EB;
+  background-color: #FFFFFF;
+}
+
+.drafo-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Color Presets Grid */
+.drafo-color-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.drafo-color-swatch {
+  height: 24px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.drafo-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.drafo-color-swatch.active {
+  border-color: #0F172A;
+  box-shadow: 0 0 0 2px #FFFFFF inset;
+}
+
+/* Segmented Control Buttons */
+.drafo-segmented-control {
+  display: flex;
+  background-color: #F1F5F9;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.drafo-segment-btn {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.15s ease;
+}
+
+.drafo-segment-btn.active {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Checkbox Toggle */
+.drafo-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.drafo-toggle-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563EB;
+}
+
+/* Stats Box */
+.drafo-diagram-stats-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.drafo-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-count {
+  font-size: 16px;
+  font-weight: 800;
+  color: #2563EB;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+}
+
+.drafo-hint-box {
+  background-color: #F0FDF4;
+  border: 1px solid #DCFCE7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: #166534;
+  line-height: 1.4;
+}
+
+/* Alignment and Distribution Tool Grid */
+.drafo-align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.drafo-align-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-align-btn:hover {
+  background-color: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #2563EB;
+  transform: translateY(-1px);
+}
+
+/* Compact 6-Column Swatch Matrix */
+.drafo-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.drafo-swatch-btn {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.drafo-swatch-btn:hover {
+  transform: translateY(-2px);
+}
+
+.drafo-swatch-btn.active {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.drafo-swatch-box {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.drafo-swatch-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+

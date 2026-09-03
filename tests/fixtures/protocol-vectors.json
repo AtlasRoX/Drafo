@@ -1,0 +1,129 @@
+{
+  "description": "Deterministic protocol test vectors for Drafo P2P collaboration wire format",
+  "version": 1,
+  "vectors": [
+    {
+      "name": "HELLO_MESSAGE",
+      "description": "Initial handshake exchange advertising peer capabilities and protocol version",
+      "envelope": {
+        "version": 1,
+        "type": "hello",
+        "stream": "CONTROL",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 1,
+        "epoch": 1,
+        "timestamp": 1772650000000,
+        "payloadHex": "010008647261666f2d7631"
+      },
+      "expectedStatus": "VALID"
+    },
+    {
+      "name": "AUTH_MESSAGE",
+      "description": "Peer authentication token signed by issuer for room authorization",
+      "envelope": {
+        "version": 1,
+        "type": "auth",
+        "stream": "CONTROL",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 2,
+        "epoch": 1,
+        "timestamp": 1772650000100,
+        "payloadHex": "7b22726f6f6d4964223a22726f6f6d2d617263682d636f7265222c2263617073223a5b227772697465225d7d"
+      },
+      "expectedStatus": "VALID"
+    },
+    {
+      "name": "STATE_VECTOR_EXCHANGE",
+      "description": "Yjs state vector announcement to discover missing update deltas",
+      "envelope": {
+        "version": 1,
+        "type": "state-vector",
+        "stream": "DOCUMENT",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 3,
+        "epoch": 1,
+        "timestamp": 1772650000200,
+        "payloadHex": "010185c798eb0c00"
+      },
+      "expectedStatus": "VALID"
+    },
+    {
+      "name": "ENCRYPTED_UPDATE",
+      "description": "Valid AES-256-GCM encrypted Yjs update payload with 12-byte IV and valid AAD",
+      "envelope": {
+        "version": 1,
+        "type": "encrypted-update",
+        "stream": "DOCUMENT",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 4,
+        "epoch": 1,
+        "timestamp": 1772650000300,
+        "ivHex": "a1b2c3d4e5f6a7b8c9d0e1f2",
+        "payloadHex": "e3f891b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"
+      },
+      "expectedStatus": "VALID"
+    },
+    {
+      "name": "REPLAYED_UPDATE",
+      "description": "Duplicate packet matching a sequence number already processed in the sliding window",
+      "envelope": {
+        "version": 1,
+        "type": "encrypted-update",
+        "stream": "DOCUMENT",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 4,
+        "epoch": 1,
+        "timestamp": 1772650000300,
+        "ivHex": "a1b2c3d4e5f6a7b8c9d0e1f2",
+        "payloadHex": "e3f891b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"
+      },
+      "expectedStatus": "REJECTED_REPLAY"
+    },
+    {
+      "name": "WRONG_EPOCH",
+      "description": "Update arriving with obsolete key epoch after key rotation",
+      "envelope": {
+        "version": 1,
+        "type": "encrypted-update",
+        "stream": "DOCUMENT",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-origin-001",
+        "sequence": 5,
+        "epoch": 0,
+        "timestamp": 1772650000400,
+        "ivHex": "b2c3d4e5f6a7b8c9d0e1f2a3",
+        "payloadHex": "11223344556677889900aabbccddeeff"
+      },
+      "expectedStatus": "REJECTED_INVALID_EPOCH"
+    },
+    {
+      "name": "INVALID_AAD",
+      "description": "Ciphertext where senderPeerId in header was tampered with after encryption",
+      "envelope": {
+        "version": 1,
+        "type": "encrypted-update",
+        "stream": "DOCUMENT",
+        "roomId": "room-arch-core",
+        "sessionId": "sess-a1b2c3d4-e5f6-7890",
+        "senderPeerId": "peer-malicious-999",
+        "sequence": 6,
+        "epoch": 1,
+        "timestamp": 1772650000500,
+        "ivHex": "c3d4e5f6a7b8c9d0e1f2a3b4",
+        "payloadHex": "e3f891b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"
+      },
+      "expectedStatus": "REJECTED_AUTHENTICATION_FAILED"
+    }
+  ]
+}

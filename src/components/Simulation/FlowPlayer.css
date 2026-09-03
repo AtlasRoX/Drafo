@@ -1,0 +1,97 @@
+/* Drafo Flow Player Simulation Bar */
+
+.drafo-flow-player-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #FFFFFF;
+  border: 1.5px solid #2563EB;
+  border-radius: 40px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
+  z-index: 80;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.drafo-player-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drafo-player-step-badge {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.drafo-player-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.drafo-player-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.drafo-player-nodes {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.drafo-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drafo-player-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0F172A;
+  transition: all 0.15s ease;
+}
+
+.drafo-player-btn:hover {
+  background-color: #EFF6FF;
+  border-color: #93C5FD;
+  color: #2563EB;
+}
+
+.drafo-player-btn.play-btn {
+  background-color: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.drafo-player-btn.play-btn:hover {
+  background-color: #1D4ED8;
+}
+
+.drafo-player-btn.close-btn:hover {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border-color: #FCA5A5;
+}

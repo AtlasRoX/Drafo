@@ -1,0 +1,143 @@
+/* MiniMap Radar Navigation Styles */
+
+.drafo-minimap-toggle-btn {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  z-index: 45;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drafo-minimap-toggle-btn:hover {
+  background: #FFFFFF;
+  color: #2563EB;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+}
+
+.drafo-minimap-container {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+  overflow: hidden;
+  z-index: 45;
+  user-select: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drafo-minimap-container.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.drafo-minimap-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.95);
+}
+
+.drafo-minimap-floating-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.drafo-minimap-container:hover .drafo-minimap-floating-close {
+  opacity: 1;
+}
+
+.drafo-minimap-floating-close:hover {
+  background: #FFFFFF;
+  color: #0F172A;
+  transform: scale(1.05);
+}
+
+.drafo-minimap-zoom-pill {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 1px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.drafo-minimap-canvas {
+  position: relative;
+  background: #F1F5F9;
+  overflow: hidden;
+  cursor: crosshair;
+  border-radius: 11px;
+}
+
+.drafo-minimap-section {
+  position: absolute;
+  border: 1px dashed #CBD5E1;
+  border-radius: 4px;
+  background-color: rgba(226, 232, 240, 0.3);
+  pointer-events: none;
+}
+
+.drafo-minimap-node {
+  position: absolute;
+  border-radius: 2px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.drafo-minimap-node.is-container {
+  border: 1px dashed #94A3B8;
+  border-radius: 4px;
+}
+
+.drafo-minimap-viewport-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 2px solid #2563EB;
+  background-color: rgba(37, 99, 235, 0.15);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 6px rgba(37, 99, 235, 0.2);
+  transition: transform 0.04s ease-out;
+}
