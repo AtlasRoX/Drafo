@@ -1264,18 +1264,23 @@ export const App: React.FC = () => {
               {collabRoomId && (
                 <div className="drafo-viewport-live-banner">
                   <div className="drafo-viewport-banner-left">
-                    <span className="drafo-collab-pulse-dot" />
-                    <span className="drafo-viewport-room-tag">LIVE: {collabRoomId}</span>
+                    <div className="drafo-viewport-live-badge">
+                      <span className="drafo-collab-pulse-dot" />
+                      <span>LIVE</span>
+                    </div>
+                    <span className="drafo-viewport-room-tag">{collabRoomId}</span>
+                    <span className="drafo-viewport-divider">•</span>
                     <span className="drafo-viewport-peer-count">
                       {collabPeers.length > 0
-                        ? `${collabPeers.length + 1} collaborators active`
-                        : 'Waiting for collaborators to open link...'}
+                        ? `${collabPeers.length + 1} active`
+                        : 'Waiting for peers...'}
                     </span>
                   </div>
                   <div className="drafo-viewport-banner-right">
                     <button
                       className="drafo-viewport-invite-btn"
                       onClick={() => setIsCollabModalOpen(true)}
+                      title="Invite collaborators & manage session"
                     >
                       <Users size={12} />
                       <span>Invite</span>
@@ -1287,7 +1292,7 @@ export const App: React.FC = () => {
                         setCollabRoomId(null);
                         setCollabPeers([]);
                       }}
-                      title="Leave collaboration room"
+                      title="Leave live session"
                     >
                       <X size={12} />
                     </button>

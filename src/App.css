@@ -25,7 +25,7 @@
   overflow: hidden;
 }
 
-/* Floating Live Collaboration Header Banner */
+/* Floating Live Collaboration Header Banner Card */
 .drafo-viewport-live-banner {
   position: absolute;
   top: 14px;
@@ -34,14 +34,26 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #CBD5E1;
-  border-radius: 9999px;
-  padding: 6px 14px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  padding: 6px 8px 6px 14px;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+  animation: drafoBannerFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drafoBannerFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .drafo-viewport-banner-left {
@@ -50,65 +62,85 @@
   gap: 8px;
 }
 
-.drafo-viewport-room-tag {
-  font-size: 11.5px;
+.drafo-viewport-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ECFDF5;
+  color: #059669;
+  font-size: 10px;
   font-weight: 800;
-  color: #1E293B;
-  background: #F1F5F9;
+  letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.drafo-viewport-room-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.drafo-viewport-divider {
+  color: #CBD5E1;
+  font-size: 12px;
 }
 
 .drafo-viewport-peer-count {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  color: #059669;
+  color: #1E293B;
 }
 
 .drafo-viewport-banner-right {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-left: 8px;
+  padding-left: 10px;
   border-left: 1px solid #E2E8F0;
 }
 
 .drafo-viewport-invite-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: #2563EB;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 700;
+  gap: 5px;
+  background: #F8FAFC;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .drafo-viewport-invite-btn:hover {
-  background: #1D4ED8;
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
 }
 
 .drafo-viewport-leave-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: #F1F5F9;
-  color: #64748B;
-  border: none;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  color: #94A3B8;
+  border: 1px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .drafo-viewport-leave-btn:hover {
   background: #FEE2E2;
-  color: #DC2626;
+  border-color: #FECACA;
+  color: #EF4444;
 }
 
 /* Toast for collaborator join/leave */
