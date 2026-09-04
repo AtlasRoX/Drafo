@@ -915,8 +915,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 <div
                   className="drafo-node-type-label"
                   style={{
-                    color: isDarkCard ? '#CBD5E1' : '#64748B',
-                    backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+                    color: isDarkCard ? '#CBD5E1' : '#64748B'
                   }}
                 >
                   {node.status && node.status !== 'none' && (
@@ -986,11 +985,11 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               ) : (
                 (node.subtitle !== undefined || isSelected) && (
                   <div
-                    className="drafo-node-subtitle-pill"
+                    className="drafo-node-subtitle"
                     style={{
-                      color: node.style.subtextColor || (isDarkCard ? '#CBD5E1' : '#475569'),
-                      backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.08)' : '#F8FAFC',
-                      borderColor: isDarkCard ? 'rgba(255, 255, 255, 0.14)' : '#E2E8F0'
+                      color: node.style.subtextColor || (isDarkCard ? '#94A3B8' : '#64748B'),
+                      fontSize: '11.5px',
+                      cursor: 'text'
                     }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
@@ -998,7 +997,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                     }}
                     title="Double click to edit subtitle"
                   >
-                    {node.subtitle || (isSelected ? '<add route / path>' : '')}
+                    {node.subtitle || (isSelected ? '<add subtitle>' : '')}
                   </div>
                 )
               )}
