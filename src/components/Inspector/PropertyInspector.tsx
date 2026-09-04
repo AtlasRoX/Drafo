@@ -36,9 +36,96 @@ import {
   Lock,
   Unlock,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Globe,
+  Smartphone,
+  Monitor,
+  Terminal,
+  Server,
+  ExternalLink,
+  Zap,
+  Clock,
+  Radio,
+  Database,
+  Cloud,
+  StickyNote,
+  GitFork,
+  Cpu,
+  Split,
+  Pipette,
+  Check,
+  Sparkles
 } from 'lucide-react';
+import { CustomSelect, SelectOption } from '../UI/CustomSelect';
 import './Inspector.css';
+
+// Curated Luxury Accent Color Presets
+const ACCENT_COLOR_PRESETS = [
+  { name: 'Cobalt Blue', hex: '#2563EB' },
+  { name: 'Indigo Brand', hex: '#4F46E5' },
+  { name: 'Electric Sky', hex: '#0284C7' },
+  { name: 'Emerald', hex: '#059669' },
+  { name: 'Jade / Mint', hex: '#10B981' },
+  { name: 'Amber Gold', hex: '#D97706' },
+  { name: 'Sunset Orange', hex: '#EA580C' },
+  { name: 'Crimson Red', hex: '#DC2626' },
+  { name: 'Neon Rose', hex: '#E11D48' },
+  { name: 'Royal Purple', hex: '#7C3AED' },
+  { name: 'Slate Gray', hex: '#475569' },
+  { name: 'Dark Onyx', hex: '#0F172A' }
+];
+
+// Production-Grade Component Type Options with Rich Metadata
+const COMPONENT_TYPE_OPTIONS: SelectOption<NodeType>[] = [
+  { value: 'standard', label: 'Service / Microservice', sublabel: 'Universal API or backend service card', icon: <Box size={14} color="#2563EB" /> },
+  { value: 'server', label: 'Server Host / Component', sublabel: 'Compute or SSR application node', icon: <Server size={14} color="#3B82F6" /> },
+  { value: 'api', label: 'REST / GraphQL API', sublabel: 'Public or private endpoint gateway', icon: <ExternalLink size={14} color="#0284C7" /> },
+  { value: 'gateway', label: 'API Gateway', sublabel: 'Ingress proxy & load balancer', icon: <Radio size={14} color="#7C3AED" /> },
+  { value: 'auth', label: 'OAuth2 / IAM Auth', sublabel: 'Authentication & tokens server', icon: <Lock size={14} color="#DC2626" /> },
+  { value: 'database', label: 'SQL Database', sublabel: '3D cylinder persistent relational DB', icon: <Database size={14} color="#9333EA" /> },
+  { value: 'nosql', label: 'NoSQL / Document Store', sublabel: 'MongoDB / DynamoDB cylinder', icon: <Database size={14} color="#A855F7" /> },
+  { value: 'cache', label: 'Redis / In-Memory Cache', sublabel: 'Ultra-low latency key-value cache', icon: <Zap size={14} color="#EA580C" /> },
+  { value: 'queue', label: 'Message Queue / PubSub', sublabel: 'Kafka / RabbitMQ / SQS queue', icon: <Layers size={14} color="#F97316" /> },
+  { value: 'serverless', label: 'Serverless Function', sublabel: 'Lambda / Edge compute runtime', icon: <Zap size={14} color="#D97706" /> },
+  { value: 'worker', label: 'Background Worker', sublabel: 'Async batch / cron jobs runner', icon: <Clock size={14} color="#475569" /> },
+  { value: 'container', label: 'Architecture Container', sublabel: 'VPC / Subnet / Cluster boundary', icon: <Layers size={14} color="#2563EB" /> },
+  { value: 'group', label: 'Subsystem Group Zone', sublabel: 'Logical boundary perimeter', icon: <Group size={14} color="#6366F1" /> },
+  { value: 'cloud', label: 'Cloud Region / VPC', sublabel: 'AWS / GCP / Azure infrastructure', icon: <Cloud size={14} color="#6366F1" /> },
+  { value: 'kubernetes', label: 'Kubernetes Pod / Node', sublabel: 'K8s containerized orchestrator', icon: <Cpu size={14} color="#326CE5" /> },
+  { value: 'loadbalancer', label: 'Load Balancer', sublabel: 'Traffic routing & distribution', icon: <Split size={14} color="#059669" /> },
+  { value: 'browser', label: 'Web Browser Window', sublabel: 'Desktop web client preview window', icon: <Globe size={14} color="#2563EB" /> },
+  { value: 'mobile', label: 'Mobile Client App', sublabel: 'iOS / Android dynamic shell', icon: <Smartphone size={14} color="#0F172A" /> },
+  { value: 'desktop', label: 'Desktop App Window', sublabel: 'Electron / Native client frame', icon: <Monitor size={14} color="#475569" /> },
+  { value: 'terminal', label: 'Developer Terminal CLI', sublabel: 'Shell command prompt preview', icon: <Terminal size={14} color="#0F172A" /> },
+  { value: 'decision', label: 'Decision Diamond', sublabel: 'Conditional branch diamond', icon: <GitFork size={14} color="#D97706" /> },
+  { value: 'note', label: 'Sticky Note', sublabel: 'Annotation sticky documentation', icon: <StickyNote size={14} color="#F59E0B" /> }
+];
+
+// Status & Health Options with Live Status Color Dots
+const STATUS_OPTIONS: SelectOption<NodeStatus>[] = [
+  { value: 'online', label: 'Online', sublabel: 'Active & Healthy (200 OK)', indicatorColor: '#10B981' },
+  { value: 'idle', label: 'Idle', sublabel: 'Standby / Low Traffic', indicatorColor: '#F59E0B' },
+  { value: 'busy', label: 'Busy', sublabel: 'Processing / High Queue', indicatorColor: '#3B82F6' },
+  { value: 'error', label: 'Degraded / Error', sublabel: 'Elevated Error Rate / Failed', indicatorColor: '#EF4444' }
+];
+
+// Mobile Device Shell Options
+const DEVICE_OPTIONS: SelectOption<'iphone' | 'android' | 'tablet'>[] = [
+  { value: 'iphone', label: 'Apple iPhone', sublabel: 'Dynamic Island Frame', icon: <Smartphone size={14} /> },
+  { value: 'android', label: 'Android Phone', sublabel: 'Standard Mobile Frame', icon: <Smartphone size={14} /> },
+  { value: 'tablet', label: 'iPad / Tablet', sublabel: 'Wide Tablet Viewport', icon: <Monitor size={14} /> }
+];
+
+// Batch Palette Options with Color Swatches
+const BATCH_PALETTE_OPTIONS: SelectOption<string>[] = Object.keys(NODE_COLOR_PALETTES).map((key) => {
+  const p = NODE_COLOR_PALETTES[key];
+  return {
+    value: key,
+    label: p.name,
+    sublabel: p.description,
+    indicatorColor: p.headerBg || p.border
+  };
+});
 
 interface PropertyInspectorProps {
   isOpen?: boolean;
@@ -346,28 +433,54 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             </div>
           )}
 
-          {/* Batch Color Palettes Dropdown */}
+          {/* Batch Accent Color & Tint Matrix */}
           <div className="drafo-form-field" style={{ padding: '0 14px' }}>
-            <label className="drafo-field-label">Batch Color Palette</label>
-            <select
-              className="drafo-input"
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  applyBatchColorTheme(e.target.value);
-                }
+            <label className="drafo-field-label">
+              <Sparkles size={13} color="#2563EB" />
+              <span>Batch Accent Color & Tint</span>
+            </label>
+            <div className="drafo-accent-swatch-matrix">
+              {ACCENT_COLOR_PRESETS.map((p) => (
+                <button
+                  key={p.hex}
+                  className="drafo-accent-swatch-pill"
+                  onClick={() => {
+                    const targetSet = new Set(selectedIds);
+                    const updatedNodes = project.nodes.map((n) =>
+                      targetSet.has(n.id)
+                        ? {
+                            ...n,
+                            style: {
+                              ...n.style,
+                              accentColor: p.hex,
+                              borderColor: p.hex,
+                              tint: n.style.tint || 'subtle'
+                            }
+                          }
+                        : n
+                    );
+                    onUpdateProject({ ...project, nodes: updatedNodes });
+                  }}
+                  title={`Apply ${p.name} accent tint to all selected`}
+                >
+                  <span className="drafo-accent-swatch-circle" style={{ backgroundColor: p.hex }} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Batch Color Palettes CustomSelect */}
+          <div className="drafo-form-field" style={{ padding: '0 14px' }}>
+            <label className="drafo-field-label">Batch Palette Theme</label>
+            <CustomSelect
+              value=""
+              options={BATCH_PALETTE_OPTIONS}
+              placeholder="Apply theme to all selected..."
+              searchable
+              onChange={(val) => {
+                if (val) applyBatchColorTheme(val);
               }}
-            >
-              <option value="" disabled>Apply color theme to all selected...</option>
-              {Object.keys(NODE_COLOR_PALETTES).map((key) => {
-                const p = NODE_COLOR_PALETTES[key];
-                return (
-                  <option key={key} value={key}>
-                    {p.name} — {p.description}
-                  </option>
-                );
-              })}
-            </select>
+            />
           </div>
         </div>
       )}
@@ -428,31 +541,12 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
           {/* Node Shape / Type Selector */}
           <div className="drafo-form-field">
             <label className="drafo-field-label">Component Type</label>
-            <select
-              className="drafo-input"
+            <CustomSelect<NodeType>
               value={selectedNode.type}
-              onChange={(e) => updateNodeProps({ type: e.target.value as NodeType })}
-            >
-              <option value="container">Architecture Container (VPC / Subnet)</option>
-              <option value="group">Subsystem Grouping Zone</option>
-              <option value="standard">Standard Service Card</option>
-              <option value="browser">Web Browser Window</option>
-              <option value="mobile">Mobile Client App</option>
-              <option value="desktop">Desktop App Window</option>
-              <option value="terminal">Terminal CLI</option>
-              <option value="server">Next.js Server Component</option>
-              <option value="api">REST / GraphQL API</option>
-              <option value="microservice">Microservice</option>
-              <option value="serverless">Serverless Function</option>
-              <option value="gateway">API Gateway</option>
-              <option value="database">SQL Database (3D Cylinder)</option>
-              <option value="cache">Redis Cache</option>
-              <option value="queue">Message Queue</option>
-              <option value="cloud">Cloud VPC / Region</option>
-              <option value="auth">OAuth2 / IAM Auth</option>
-              <option value="decision">Decision Diamond</option>
-              <option value="note">Sticky Note</option>
-            </select>
+              options={COMPONENT_TYPE_OPTIONS}
+              searchable
+              onChange={(val) => updateNodeProps({ type: val })}
+            />
           </div>
 
           {/* Node Text & Titles */}
@@ -484,16 +578,11 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
           {!isContainerSelected && (
             <div className="drafo-form-field">
               <label className="drafo-field-label">Status & Health</label>
-              <select
-                className="drafo-input"
+              <CustomSelect<NodeStatus>
                 value={selectedNode.status || 'online'}
-                onChange={(e) => updateNodeProps({ status: e.target.value as NodeStatus })}
-              >
-                <option value="online">Online (Active & Healthy)</option>
-                <option value="idle">Idle (Standby)</option>
-                <option value="busy">Busy (Processing / Queued)</option>
-                <option value="error">Error (Degraded / Failed)</option>
-              </select>
+                options={STATUS_OPTIONS}
+                onChange={(val) => updateNodeProps({ status: val })}
+              />
             </div>
           )}
 
@@ -553,22 +642,18 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
           {selectedNode.type === 'mobile' && (
             <div className="drafo-form-field">
               <label className="drafo-field-label">Mobile Device Shell</label>
-              <select
-                className="drafo-input"
+              <CustomSelect<'iphone' | 'android' | 'tablet'>
                 value={selectedNode.customData?.deviceType || 'iphone'}
-                onChange={(e) =>
+                options={DEVICE_OPTIONS}
+                onChange={(val) =>
                   updateNodeProps({
                     customData: {
                       ...selectedNode.customData,
-                      deviceType: e.target.value as 'iphone' | 'android' | 'tablet'
+                      deviceType: val
                     }
                   })
                 }
-              >
-                <option value="iphone">Apple iPhone (Dynamic Island)</option>
-                <option value="android">Android Phone</option>
-                <option value="tablet">iPad / Tablet</option>
-              </select>
+              />
             </div>
           )}
 
@@ -634,6 +719,94 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   {s}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Accent Color & Surface Tint Section */}
+          <div className="drafo-form-field">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="drafo-field-label">
+                <Sparkles size={13} color="#2563EB" />
+                <span>Accent Color & Tint</span>
+              </label>
+              {selectedNode.style.accentColor && (
+                <button
+                  type="button"
+                  className="drafo-reset-accent-btn"
+                  onClick={() => updateNodeStyle({ accentColor: undefined, tint: 'none', borderColor: undefined })}
+                  title="Reset to default type color"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+
+            {/* Accent Swatches Matrix */}
+            <div className="drafo-accent-swatch-matrix">
+              {ACCENT_COLOR_PRESETS.map((p) => {
+                const isSelected = selectedNode.style.accentColor === p.hex;
+                return (
+                  <button
+                    key={p.hex}
+                    type="button"
+                    className={`drafo-accent-swatch-pill ${isSelected ? 'is-active' : ''}`}
+                    onClick={() =>
+                      updateNodeStyle({
+                        accentColor: p.hex,
+                        borderColor: p.hex,
+                        tint: selectedNode.style.tint || 'subtle'
+                      })
+                    }
+                    title={`${p.name} (${p.hex})`}
+                  >
+                    <span className="drafo-accent-swatch-circle" style={{ backgroundColor: p.hex }}>
+                      {isSelected && <Check size={11} color="#FFFFFF" strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Custom Color Input */}
+              <label className="drafo-accent-custom-btn" title="Choose custom hex color">
+                <Pipette size={13} color="#475569" />
+                <input
+                  type="color"
+                  value={selectedNode.style.accentColor || '#2563EB'}
+                  onChange={(e) =>
+                    updateNodeStyle({
+                      accentColor: e.target.value,
+                      borderColor: e.target.value,
+                      tint: selectedNode.style.tint || 'subtle'
+                    })
+                  }
+                  className="drafo-color-native-hidden"
+                />
+              </label>
+            </div>
+
+            {/* Surface Tint Intensity */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B' }}>Surface Tint Intensity</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', textTransform: 'capitalize' }}>
+                  {selectedNode.style.tint || (selectedNode.style.accentColor ? 'subtle' : 'none')}
+                </span>
+              </div>
+              <div className="drafo-segmented-control">
+                {(['none', 'subtle', 'medium', 'strong'] as const).map((t) => {
+                  const currentTint = selectedNode.style.tint || (selectedNode.style.accentColor ? 'subtle' : 'none');
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className={`drafo-segment-btn ${currentTint === t ? 'active' : ''}`}
+                      onClick={() => updateNodeStyle({ tint: t })}
+                    >
+                      {t === 'none' ? 'None' : t === 'subtle' ? 'Subtle' : t === 'medium' ? 'Medium' : 'Bold'}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

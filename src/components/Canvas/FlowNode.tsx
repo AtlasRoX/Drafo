@@ -31,6 +31,9 @@ import {
 export type ResizeHandleType = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 const getNodeAccentColor = (node: FlowNodeType): string => {
+  if (node.style?.accentColor) {
+    return node.style.accentColor;
+  }
   if (node.style?.colorPalette && NODE_COLOR_PALETTES[node.style.colorPalette]) {
     return NODE_COLOR_PALETTES[node.style.colorPalette].headerBg || '#2563EB';
   }
@@ -913,14 +916,28 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
     node.style.bg === '#FEF2F2';
 
   const isContainer = node.type === 'container' || node.type === 'group';
+  const accentColor = getNodeAccentColor(node);
+  const tint = node.style.tint || (node.style.accentColor ? 'subtle' : 'none');
 
   const cardBg = isCustomShape
     ? 'transparent'
     : isContainer
-    ? (node.style.bg || 'rgba(37, 99, 235, 0.03)')
-    : (isOldPastelBg || !node.style.bg ? '#FFFFFF' : node.style.bg);
-
-  const accentColor = getNodeAccentColor(node);
+    ? (node.style.bg && node.style.bg !== 'transparent'
+        ? node.style.bg
+        : tint === 'medium'
+        ? `${accentColor}0F`
+        : tint === 'strong'
+        ? `${accentColor}1A`
+        : `${accentColor}06`)
+    : node.style.bg && !isOldPastelBg && node.style.bg !== '#FFFFFF'
+    ? node.style.bg
+    : tint === 'subtle'
+    ? `${accentColor}09`
+    : tint === 'medium'
+    ? `${accentColor}16`
+    : tint === 'strong'
+    ? `${accentColor}28`
+    : '#FFFFFF';
 
   // Preserve the sharp, distinctive colored border
   const cardBorder = isCustomShape

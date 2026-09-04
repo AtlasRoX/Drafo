@@ -1,0 +1,245 @@
+/* Production-Grade Custom Select Component */
+
+.drafo-custom-select-container {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+  user-select: none;
+}
+
+.drafo-custom-select-container.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Trigger Button */
+.drafo-custom-select-trigger {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #0F172A;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.drafo-custom-select-trigger:hover {
+  border-color: #CBD5E1;
+  background: #F8FAFC;
+}
+
+.drafo-custom-select-container.is-open .drafo-custom-select-trigger,
+.drafo-custom-select-trigger:focus-visible {
+  border-color: #3B82F6;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.drafo-select-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drafo-select-placeholder {
+  color: #94A3B8;
+  font-size: 12px;
+}
+
+.drafo-select-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.drafo-select-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.drafo-select-item-label {
+  font-weight: 500;
+  color: #0F172A;
+}
+
+.drafo-select-item-sublabel {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 400;
+}
+
+.drafo-select-chevron {
+  color: #64748B;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drafo-select-chevron.rotated {
+  transform: rotate(180deg);
+  color: #2563EB;
+}
+
+/* Popover Dropdown Menu */
+.drafo-custom-select-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+  padding: 5px;
+  animation: drafoSelectDropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes drafoSelectDropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search Box inside dropdown */
+.drafo-select-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+}
+
+.drafo-select-search-icon {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.drafo-select-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  color: #0F172A;
+  outline: none;
+}
+
+.drafo-select-search-input::placeholder {
+  color: #94A3B8;
+}
+
+/* Options List */
+.drafo-select-options-list {
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drafo-select-options-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.drafo-select-options-list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.drafo-select-options-list::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Option Item */
+.drafo-custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1E293B;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drafo-custom-select-option:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.drafo-custom-select-option.is-selected {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  font-weight: 600;
+}
+
+.drafo-custom-select-option.is-selected .drafo-select-item-icon {
+  color: #2563EB;
+}
+
+.drafo-option-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.drafo-option-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.drafo-option-label {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.drafo-option-sublabel {
+  font-size: 10px;
+  color: #64748B;
+  line-height: 1.2;
+}
+
+.drafo-custom-select-option.is-selected .drafo-option-sublabel {
+  color: #3B82F6;
+}
+
+.drafo-select-check-icon {
+  color: #2563EB;
+  flex-shrink: 0;
+}
+
+.drafo-select-empty-state {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 11.5px;
+  color: #94A3B8;
+}

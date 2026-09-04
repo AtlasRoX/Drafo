@@ -53,6 +53,8 @@ export interface NodeStyle {
   headerBg?: string;
   headerColor?: string;
   colorPalette?: string;
+  accentColor?: string;
+  tint?: 'none' | 'subtle' | 'medium' | 'strong' | string;
   isDashed?: boolean;
   shadow?: boolean;
 }
