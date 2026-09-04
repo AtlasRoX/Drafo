@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Lock
 } from 'lucide-react';
+import { isColorDark } from '../../utils/colorUtils';
 
 export type ResizeHandleType = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
@@ -185,6 +186,53 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
   // 4 Corner Resize Handles - prevents overlapping and blocking the 4 edge connection ports!
   const resizeHandles: ResizeHandleType[] = ['nw', 'ne', 'se', 'sw'];
+
+  const isCustomShape =
+    node.type === 'browser' ||
+    node.type === 'mobile' ||
+    node.type === 'desktop' ||
+    node.type === 'terminal' ||
+    node.type === 'database' ||
+    node.type === 'nosql' ||
+    node.type === 'cloud' ||
+    node.type === 'decision' ||
+    node.type === 'note';
+
+  const isContainer = node.type === 'container' || node.type === 'group';
+  const accentColor = getNodeAccentColor(node);
+  const tint = node.style.tint || (node.style.accentColor ? 'subtle' : 'none');
+
+  // Compute card background fill
+  const cardBg = isCustomShape
+    ? 'transparent'
+    : isContainer
+    ? (node.style.bg && node.style.bg !== 'transparent' && node.style.bg !== 'auto'
+        ? node.style.bg
+        : tint === 'medium'
+        ? `${accentColor}0F`
+        : tint === 'strong'
+        ? `${accentColor}1A`
+        : `${accentColor}06`)
+    : node.style.bg && node.style.bg !== 'auto' && node.style.bg !== 'default'
+    ? node.style.bg
+    : tint === 'subtle'
+    ? `${accentColor}09`
+    : tint === 'medium'
+    ? `${accentColor}16`
+    : tint === 'strong'
+    ? `${accentColor}28`
+    : '#FFFFFF';
+
+  const isDarkCard = isColorDark(cardBg);
+
+  // Preserve the sharp, distinctive colored border
+  const cardBorder = isCustomShape
+    ? 'transparent'
+    : (node.style.borderColor && node.style.borderColor !== '#E2E8F0'
+        ? node.style.borderColor
+        : isDarkCard
+        ? `${accentColor}90`
+        : accentColor);
 
   // Render specific node shapes
   const renderContent = () => {
@@ -480,7 +528,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         const w = node.width;
         const h = node.height;
         const strokeColor = node.style.borderColor || '#9333EA';
-        const bodyFill = node.style.bg || '#FAF5FF';
+        const bodyFill = node.style.bg && node.style.bg !== 'auto' ? node.style.bg : '#FAF5FF';
         const capFill =
           node.customData?.cylinderCapColor ||
           (node.style.colorPalette === 'purple' ? '#E9D5FF' : '#E0E7FF');
@@ -593,7 +641,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       // 6. Cloud VPC / Region Component (Harmonious Organic Architecture Cloud)
       case 'cloud': {
         const strokeColor = node.style.borderColor || '#4F46E5';
-        const fillColor = node.style.bg || '#EEF2FF';
+        const fillColor = node.style.bg && node.style.bg !== 'auto' ? node.style.bg : '#EEF2FF';
         const borderWidth = node.style.borderWidth || 1.5;
 
         return (
@@ -707,7 +755,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       // 8. Sticky Note
       case 'note':
         return (
-          <div className="drafo-node-note-inner">
+          <div
+            className="drafo-node-note-inner"
+            style={{
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined
+            }}
+          >
             <div className="drafo-note-pin" />
             {isEditingTitle ? (
               <input
@@ -798,14 +851,20 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 <div
                   className="drafo-node-icon-box"
                   style={{
-                    backgroundColor: `${accentColor}12`,
-                    color: accentColor,
-                    borderColor: `${accentColor}25`
+                    backgroundColor: isDarkCard ? `${accentColor}24` : `${accentColor}12`,
+                    color: isDarkCard ? '#FFFFFF' : accentColor,
+                    borderColor: isDarkCard ? `${accentColor}50` : `${accentColor}25`
                   }}
                 >
                   {iconElement}
                 </div>
-                <div className="drafo-node-type-label">
+                <div
+                  className="drafo-node-type-label"
+                  style={{
+                    color: isDarkCard ? '#CBD5E1' : '#64748B',
+                    backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+                  }}
+                >
                   {node.status && node.status !== 'none' && (
                     <span className={`drafo-status-dot ${node.status}`} />
                   )}
@@ -814,7 +873,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               </div>
 
               {node.metric && (
-                <div className="drafo-node-metric-badge">
+                <div
+                  className="drafo-node-metric-badge"
+                  style={{
+                    backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.08)' : '#F8FAFC',
+                    borderColor: isDarkCard ? 'rgba(255, 255, 255, 0.14)' : '#E2E8F0',
+                    color: isDarkCard ? '#CBD5E1' : '#64748B'
+                  }}
+                >
                   {node.metric}
                 </div>
               )}
@@ -831,11 +897,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input title-input"
+                  style={{ color: isDarkCard ? '#F8FAFC' : '#0F172A' }}
                 />
               ) : (
                 <div
                   className="drafo-node-title"
-                  style={{ color: node.style.textColor || '#0F172A' }}
+                  style={{ color: node.style.textColor || (isDarkCard ? '#F8FAFC' : '#0F172A') }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -859,13 +926,18 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                     }
                   }}
                   className="drafo-inline-textarea"
+                  style={{ color: isDarkCard ? '#CBD5E1' : '#475569' }}
                   rows={2}
                 />
               ) : (
                 (node.subtitle !== undefined || isSelected) && (
                   <div
                     className="drafo-node-subtitle-pill"
-                    style={{ color: node.style.subtextColor || '#475569' }}
+                    style={{
+                      color: node.style.subtextColor || (isDarkCard ? '#CBD5E1' : '#475569'),
+                      backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.08)' : '#F8FAFC',
+                      borderColor: isDarkCard ? 'rgba(255, 255, 255, 0.14)' : '#E2E8F0'
+                    }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       setIsEditingSubtitle(true);
@@ -893,58 +965,6 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       }
     }
   };
-
-  const isCustomShape =
-    node.type === 'browser' ||
-    node.type === 'mobile' ||
-    node.type === 'desktop' ||
-    node.type === 'terminal' ||
-    node.type === 'database' ||
-    node.type === 'nosql' ||
-    node.type === 'cloud' ||
-    node.type === 'decision' ||
-    node.type === 'note';
-
-  const isOldPastelBg =
-    node.style.bg === '#EFF6FF' ||
-    node.style.bg === '#EEF2FF' ||
-    node.style.bg === '#F0FDF4' ||
-    node.style.bg === '#F0F9FF' ||
-    node.style.bg === '#FFFBEB' ||
-    node.style.bg === '#F5F3FF' ||
-    node.style.bg === '#ECFDF5' ||
-    node.style.bg === '#FEF2F2';
-
-  const isContainer = node.type === 'container' || node.type === 'group';
-  const accentColor = getNodeAccentColor(node);
-  const tint = node.style.tint || (node.style.accentColor ? 'subtle' : 'none');
-
-  const cardBg = isCustomShape
-    ? 'transparent'
-    : isContainer
-    ? (node.style.bg && node.style.bg !== 'transparent'
-        ? node.style.bg
-        : tint === 'medium'
-        ? `${accentColor}0F`
-        : tint === 'strong'
-        ? `${accentColor}1A`
-        : `${accentColor}06`)
-    : node.style.bg && !isOldPastelBg && node.style.bg !== '#FFFFFF'
-    ? node.style.bg
-    : tint === 'subtle'
-    ? `${accentColor}09`
-    : tint === 'medium'
-    ? `${accentColor}16`
-    : tint === 'strong'
-    ? `${accentColor}28`
-    : '#FFFFFF';
-
-  // Preserve the sharp, distinctive colored border
-  const cardBorder = isCustomShape
-    ? 'transparent'
-    : (node.style.borderColor && node.style.borderColor !== '#E2E8F0'
-        ? node.style.borderColor
-        : accentColor);
 
   return (
     <div
