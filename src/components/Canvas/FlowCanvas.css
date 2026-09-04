@@ -1274,42 +1274,72 @@
 .drafo-edge-actions {
   display: flex;
   align-items: center;
-  gap: 3px;
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  padding: 2px 4px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 3px 6px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
+  animation: drafoActionPop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drafoActionPop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .drafo-edge-action-btn {
   background: transparent;
-  border: none;
-  font-size: 12px;
-  font-weight: 700;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
   color: #475569;
   cursor: pointer;
-  padding: 1px 4px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  gap: 3px;
+  transition: all 0.12s ease;
+  user-select: none;
 }
 
 .drafo-edge-action-btn:hover {
-  background-color: #EEF2FF;
+  background-color: #EFF6FF;
+  border-color: #BFDBFE;
   color: #2563EB;
+}
+
+.drafo-edge-action-btn.active {
+  background-color: #DBEAFE;
+  border-color: #93C5FD;
+  color: #1D4ED8;
 }
 
 .drafo-edge-action-btn.delete:hover {
   background-color: #FEE2E2;
-  color: #EF4444;
+  border-color: #FECACA;
+  color: #DC2626;
 }
 
 .drafo-edge-action-btn.reset:hover {
   background-color: #FEF3C7;
+  border-color: #FDE68A;
   color: #D97706;
+}
+
+.drafo-connecting-path {
+  animation: drafoFlowDash 0.8s linear infinite;
 }
 
 /* Canva-Style Connector Endpoint & Waypoint Handles */

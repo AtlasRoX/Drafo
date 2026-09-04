@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect, memo } from 'react';
-import { FlowEdge as FlowEdgeType, FlowNode } from '../../types/flow';
+import { FlowEdge as FlowEdgeType, FlowNode, RouteType, LineStyle } from '../../types/flow';
 import { calculateEdgePath } from '../../utils/routing';
+import { ArrowLeftRight, Trash2, Zap, RotateCcw } from 'lucide-react';
 
 interface FlowEdgeProps {
   edge: FlowEdgeType;
@@ -62,7 +63,7 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
     targetNode,
     edge.fromPort,
     edge.toPort,
-    edge.routeType,
+    edge.routeType || 'curved',
     edge.controlPoint,
     sourceOverride,
     targetOverride
@@ -85,12 +86,58 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
 
   const strokeDash =
     edge.lineStyle === 'dashed'
-      ? '6,5'
+      ? '7,5'
       : edge.lineStyle === 'dotted'
-      ? '2,4'
+      ? '2.5,4.5'
       : edge.isAnimated
       ? '6,4'
       : 'none';
+
+  // Quick Action Helpers
+  const handleCycleRoute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const routes: RouteType[] = ['curved', 'orthogonal', 'straight'];
+    const currentRoute = edge.routeType || 'curved';
+    const nextIdx = (routes.indexOf(currentRoute) + 1) % routes.length;
+    onUpdate({ ...edge, routeType: routes[nextIdx], controlPoint: undefined });
+  };
+
+  const handleCycleStyle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const styles: LineStyle[] = ['solid', 'dashed', 'dotted'];
+    const currentStyle = edge.lineStyle || 'solid';
+    const nextIdx = (styles.indexOf(currentStyle) + 1) % styles.length;
+    onUpdate({ ...edge, lineStyle: styles[nextIdx] });
+  };
+
+  const handleToggleAnimated = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdate({ ...edge, isAnimated: !edge.isAnimated });
+  };
+
+  const handleSwapDirection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdate({
+      ...edge,
+      fromNodeId: edge.toNodeId,
+      toNodeId: edge.fromNodeId,
+      fromPort: edge.toPort,
+      toPort: edge.fromPort,
+      arrowhead: edge.arrowheadStart || 'none',
+      arrowheadStart: edge.arrowhead || 'arrow',
+      controlPoint: undefined
+    });
+  };
+
+  const handleResetCurve = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdate({ ...edge, controlPoint: undefined });
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(edge.id);
+  };
 
   return (
     <g
@@ -114,7 +161,7 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth={18}
+        strokeWidth={22}
         className="drafo-edge-hitbox"
       />
 
@@ -139,6 +186,8 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
         strokeDasharray={strokeDash}
         markerStart={markerStart}
         markerEnd={markerEnd}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className={`drafo-edge-path ${edge.isAnimated ? 'is-animated' : ''}`}
       />
 
@@ -149,8 +198,8 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
         </circle>
       )}
 
-      {/* Step Label / Badge */}
-      {(edge.label || edge.latency || isSelected || isEditingLabel) && (
+      {/* Step Label / Badge / Latency */}
+      {(edge.label || edge.stepNumber !== undefined || edge.latency || isSelected || isEditingLabel) && (
         <g
           transform={`translate(${labelPosition.x}, ${labelPosition.y})`}
           className="drafo-edge-label-group"
@@ -186,7 +235,8 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
                 dominantBaseline="central"
                 className="drafo-edge-label-text-bg"
               >
-                {edge.label || '<add step label>'}
+                {edge.stepNumber !== undefined ? `[${edge.stepNumber}] ` : ''}
+                {edge.label || (isSelected ? '<add step label>' : '')}
               </text>
               <text
                 x={0}
@@ -195,7 +245,8 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
                 dominantBaseline="central"
                 className="drafo-edge-label-text"
               >
-                {edge.label || '<add step label>'}
+                {edge.stepNumber !== undefined ? `[${edge.stepNumber}] ` : ''}
+                {edge.label || (isSelected ? '<add step label>' : '')}
               </text>
 
               {/* Latency badge pill */}
@@ -225,6 +276,64 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
               )}
             </g>
           )}
+
+          {/* Quick Floating Action Controls when Edge is Selected */}
+          {isSelected && !isEditingLabel && (
+            <foreignObject x={-100} y={22} width={200} height={34} className="drafo-edge-action-pill">
+              <div className="drafo-edge-actions" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="drafo-edge-action-btn"
+                  onClick={handleCycleRoute}
+                  title={`Route: ${edge.routeType || 'curved'} (Click to cycle)`}
+                >
+                  {edge.routeType === 'orthogonal' ? 'Elbow' : edge.routeType === 'straight' ? 'Direct' : 'Curve'}
+                </button>
+                <button
+                  type="button"
+                  className="drafo-edge-action-btn"
+                  onClick={handleCycleStyle}
+                  title={`Style: ${edge.lineStyle || 'solid'} (Click to cycle)`}
+                >
+                  {edge.lineStyle === 'dashed' ? 'Dashed' : edge.lineStyle === 'dotted' ? 'Dotted' : 'Solid'}
+                </button>
+                <button
+                  type="button"
+                  className={`drafo-edge-action-btn ${edge.isAnimated ? 'active' : ''}`}
+                  onClick={handleToggleAnimated}
+                  title="Toggle animation pulse"
+                >
+                  <Zap size={11} color={edge.isAnimated ? '#2563EB' : '#64748B'} />
+                </button>
+                <button
+                  type="button"
+                  className="drafo-edge-action-btn"
+                  onClick={handleSwapDirection}
+                  title="Reverse line direction"
+                >
+                  <ArrowLeftRight size={11} />
+                </button>
+                {edge.controlPoint && (
+                  <button
+                    type="button"
+                    className="drafo-edge-action-btn reset"
+                    onClick={handleResetCurve}
+                    title="Reset bend to auto"
+                  >
+                    <RotateCcw size={11} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="drafo-edge-action-btn delete"
+                  onClick={handleDelete}
+                  title="Delete connector"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            </foreignObject>
+          )}
         </g>
       )}
     </g>
@@ -251,8 +360,6 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
   onStartDragEndpoint,
   onResetWaypoint
 }) => {
-  const waypointPos = waypointPosition;
-
   return (
     <g className="drafo-canva-edge-controls" style={{ pointerEvents: 'auto' }}>
       {/* 1. Start Endpoint Handle (Drag to reconnect or snap start) */}
@@ -260,14 +367,16 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
         <circle
           cx={sourcePoint.x}
           cy={sourcePoint.y}
-          r={16}
+          r={18}
           fill="transparent"
           style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
           onMouseDown={(e) => {
             e.stopPropagation();
             onStartDragEndpoint?.(edge.id, 'source', e);
           }}
-        />
+        >
+          <title>Drag to reconnect start port</title>
+        </circle>
         <circle
           cx={sourcePoint.x}
           cy={sourcePoint.y}
@@ -293,14 +402,16 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
         <circle
           cx={targetPoint.x}
           cy={targetPoint.y}
-          r={16}
+          r={18}
           fill="transparent"
           style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
           onMouseDown={(e) => {
             e.stopPropagation();
             onStartDragEndpoint?.(edge.id, 'target', e);
           }}
-        />
+        >
+          <title>Drag to reconnect end port</title>
+        </circle>
         <circle
           cx={targetPoint.x}
           cy={targetPoint.y}
@@ -321,11 +432,11 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
         />
       </g>
 
-      {/* 3. Canva Curvature & Elbow Waypoint Handle (Pinned directly on line, ZERO detached lines) */}
+      {/* 3. Canva Curvature & Elbow Waypoint Handle (Pinned directly on line, 1:1 cursor sync) */}
       <g className="drafo-canva-handle-group">
         <circle
-          cx={waypointPos.x}
-          cy={waypointPos.y}
+          cx={waypointPosition.x}
+          cy={waypointPosition.y}
           r={18}
           fill="transparent"
           style={{ cursor: 'grab', pointerEvents: 'auto' }}
@@ -337,10 +448,12 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
             e.stopPropagation();
             onResetWaypoint?.(edge.id);
           }}
-        />
+        >
+          <title>Drag to bend / Double-click to reset</title>
+        </circle>
         <circle
-          cx={waypointPos.x}
-          cy={waypointPos.y}
+          cx={waypointPosition.x}
+          cy={waypointPosition.y}
           r={6.5}
           fill="#FFFFFF"
           stroke="#2563EB"
@@ -369,15 +482,17 @@ function flowEdgeAreEqual(prev: FlowEdgeProps, next: FlowEdgeProps): boolean {
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isSimActive !== next.isSimActive) return false;
   if (prev.dragEndpointPos !== next.dragEndpointPos) return false;
-  // Source/target node position or size changes require re-render (path recalculation)
+
   const sA = prev.sourceNode, sB = next.sourceNode;
   const tA = prev.targetNode, tB = next.targetNode;
   if (sA.x !== sB.x || sA.y !== sB.y || sA.width !== sB.width || sA.height !== sB.height) return false;
   if (tA.x !== tB.x || tA.y !== tB.y || tA.width !== tB.width || tA.height !== tB.height) return false;
-  // Edge data changes
+
   const a = prev.edge, b = next.edge;
   return (
     a.id === b.id &&
+    a.fromNodeId === b.fromNodeId &&
+    a.toNodeId === b.toNodeId &&
     a.fromPort === b.fromPort &&
     a.toPort === b.toPort &&
     a.label === b.label &&
@@ -386,8 +501,11 @@ function flowEdgeAreEqual(prev: FlowEdgeProps, next: FlowEdgeProps): boolean {
     a.lineStyle === b.lineStyle &&
     a.routeType === b.routeType &&
     a.arrowhead === b.arrowhead &&
+    a.arrowheadStart === b.arrowheadStart &&
     a.bidirectional === b.bidirectional &&
     a.isAnimated === b.isAnimated &&
+    a.stepNumber === b.stepNumber &&
+    a.latency === b.latency &&
     a.controlPoint?.x === b.controlPoint?.x &&
     a.controlPoint?.y === b.controlPoint?.y
   );

@@ -11,7 +11,7 @@ import {
 import { FlowNode, FlowNodeMemo } from './FlowNode';
 import { FlowEdge, FlowEdgeMemo, FlowEdgeHandles } from './FlowEdge';
 import { SectionHeader } from './SectionHeader';
-import { getPortCoordinates, calculateEdgePath } from '../../utils/routing';
+import { getPortCoordinates, getPortNormal, calculateEdgePath } from '../../utils/routing';
 import {
   ZoomIn,
   ZoomOut,
@@ -915,9 +915,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
           const updatedEdges = projectRef.current.edges.map((e) => {
             if (e.id === activeEndpointDrag.edgeId) {
               if (activeEndpointDrag.endpoint === 'source') {
-                return { ...e, fromNodeId: activeMagnet.nodeId, fromPort: activeMagnet.port };
+                return { ...e, fromNodeId: activeMagnet.nodeId, fromPort: activeMagnet.port, controlPoint: undefined };
               } else {
-                return { ...e, toNodeId: activeMagnet.nodeId, toPort: activeMagnet.port };
+                return { ...e, toNodeId: activeMagnet.nodeId, toPort: activeMagnet.port, controlPoint: undefined };
               }
             }
             return e;
@@ -958,9 +958,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             const updatedEdges = projectRef.current.edges.map((edgeItem) => {
               if (edgeItem.id === activeEndpointDrag.edgeId) {
                 if (activeEndpointDrag.endpoint === 'source') {
-                  return { ...edgeItem, fromNodeId: targetNode.id, fromPort: closestPort };
+                  return { ...edgeItem, fromNodeId: targetNode.id, fromPort: closestPort, controlPoint: undefined };
                 } else {
-                  return { ...edgeItem, toNodeId: targetNode.id, toPort: closestPort };
+                  return { ...edgeItem, toNodeId: targetNode.id, toPort: closestPort, controlPoint: undefined };
                 }
               }
               return edgeItem;
@@ -1234,7 +1234,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const handleStartDragWaypoint = useCallback(
     (edgeId: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      dragSnapshotRef.current = project;
+      dragSnapshotRef.current = projectRef.current;
       const canvasPos = screenToCanvas(e.clientX, e.clientY);
       setDraggingWaypoint({
         edgeId,
@@ -1242,18 +1242,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         startY: canvasPos.y
       });
     },
-    [project, screenToCanvas]
+    [screenToCanvas]
   );
 
   const handleStartDragEndpoint = useCallback(
     (edgeId: string, endpoint: 'source' | 'target', e: React.MouseEvent) => {
       e.stopPropagation();
-      dragSnapshotRef.current = project;
+      dragSnapshotRef.current = projectRef.current;
       setDraggingEdgeEndpoint({ edgeId, endpoint });
       const canvasPos = screenToCanvas(e.clientX, e.clientY);
       setDragEndpointPos({ edgeId, endpoint, point: canvasPos });
     },
-    [project, screenToCanvas]
+    [screenToCanvas]
   );
 
   const handleUpdateSection = (updatedSection: FlowSection) => {
@@ -1514,17 +1514,26 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 if (!sourceNode) return null;
                 const p1 = getPortCoordinates(sourceNode, connecting.fromPort);
                 const p2 = connecting.currentPoint;
+                const norm1 = getPortNormal(connecting.fromPort);
+                const norm2 = magneticTarget ? getPortNormal(magneticTarget.port) : null;
+                const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                const offset = Math.max(28, Math.min(dist * 0.45, 160));
+                const cp1 = { x: p1.x + norm1.x * offset, y: p1.y + norm1.y * offset };
+                const cp2 = norm2
+                  ? { x: p2.x + norm2.x * offset, y: p2.y + norm2.y * offset }
+                  : { x: p2.x - norm1.x * (offset * 0.4), y: p2.y - norm1.y * (offset * 0.4) };
+                const previewPath = `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`;
+
                 return (
                   <>
-                    <line
-                      x1={p1.x}
-                      y1={p1.y}
-                      x2={p2.x}
-                      y2={p2.y}
+                    <path
+                      d={previewPath}
+                      fill="none"
                       stroke="#2563EB"
                       strokeWidth={2}
-                      strokeDasharray="4,4"
+                      strokeDasharray="6,4"
                       markerEnd="url(#marker-arrow-2563EB)"
+                      className="drafo-connecting-path"
                     />
                     {magneticTarget && (
                       <g className="drafo-port-suction-group">
@@ -1724,10 +1733,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 onStartDragEndpoint={handleStartDragEndpoint}
                 onStartDragWaypoint={handleStartDragWaypoint}
                 onResetWaypoint={(edgeId) => {
-                  const updated = project.edges.map((e) =>
+                  const proj = projectRef.current;
+                  const updated = proj.edges.map((e) =>
                     e.id === edgeId ? { ...e, controlPoint: undefined } : e
                   );
-                  onUpdateProject({ ...project, edges: updated });
+                  onUpdateProject({ ...proj, edges: updated });
                 }}
               />
             );
