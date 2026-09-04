@@ -228,11 +228,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
   // Preserve the sharp, distinctive colored border
   const cardBorder = isCustomShape
     ? 'transparent'
-    : (node.style.borderColor && node.style.borderColor !== '#E2E8F0'
-        ? node.style.borderColor
-        : isDarkCard
-        ? `${accentColor}90`
-        : accentColor);
+    : (node.style.borderColor || (isDarkCard ? `${accentColor}90` : accentColor));
 
   // Render specific node shapes
   const renderContent = () => {
@@ -260,11 +256,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                     onBlur={handleTitleSubmit}
                     onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                     className="drafo-inline-input"
-                    style={{ fontWeight: 700 }}
+                    style={{ fontWeight: 700, color: node.style.textColor }}
                   />
                 ) : (
                   <span
                     className="drafo-container-title"
+                    style={{ color: node.style.textColor }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       setIsEditingTitle(true);
@@ -276,7 +273,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 )}
               </div>
               {node.subtitle && (
-                <span className="drafo-container-tag">{node.subtitle}</span>
+                <span className="drafo-container-tag" style={{ color: node.style.subtextColor }}>{node.subtitle}</span>
               )}
             </div>
           </div>
@@ -285,10 +282,16 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       // 1. Web Browser Window
       case 'browser':
         return (
-          <div className="drafo-node-browser-inner">
+          <div
+            className="drafo-node-browser-inner"
+            style={{
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined,
+              borderColor: node.style.borderColor || node.style.accentColor
+            }}
+          >
             <div
               className="drafo-browser-header"
-              style={{ backgroundColor: node.style.headerBg || '#2563EB' }}
+              style={{ backgroundColor: node.style.accentColor || node.style.headerBg || '#2563EB' }}
             >
               <div className="drafo-browser-dots">
                 <span className="dot dot-white" />
@@ -297,12 +300,15 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               </div>
             </div>
 
-            <div className="drafo-browser-body">
-              <div className="drafo-browser-sidebar-preview" />
+            <div
+              className="drafo-browser-body"
+              style={{ backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined }}
+            >
+              <div className="drafo-browser-sidebar-preview" style={{ backgroundColor: `${accentColor}30` }} />
               <div className="drafo-browser-content-preview">
-                <div className="drafo-preview-line line-wide" />
-                <div className="drafo-preview-line line-mid" />
-                <div className="drafo-preview-line line-short" />
+                <div className="drafo-preview-line line-wide" style={{ backgroundColor: `${accentColor}40` }} />
+                <div className="drafo-preview-line line-mid" style={{ backgroundColor: `${accentColor}25` }} />
+                <div className="drafo-preview-line line-short" style={{ backgroundColor: `${accentColor}15` }} />
               </div>
             </div>
 
@@ -316,10 +322,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
+                  style={{ color: node.style.textColor }}
                 />
               ) : (
                 <span
                   className="drafo-node-title"
+                  style={{ color: node.style.textColor }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -338,7 +346,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         return (
           <div
             className="drafo-node-mobile-inner"
-            style={{ borderColor: node.style.borderColor || '#1E293B' }}
+            style={{ borderColor: node.style.borderColor || node.style.accentColor || '#1E293B' }}
           >
             {/* Top Status Bar with Dynamic Island */}
             <div className="drafo-mobile-top-bar">
@@ -353,7 +361,10 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
             </div>
 
             {/* Mobile Screen Content */}
-            <div className="drafo-mobile-screen">
+            <div
+              className="drafo-mobile-screen"
+              style={{ backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined }}
+            >
               {isEditingTitle ? (
                 <input
                   ref={titleInputRef}
@@ -363,11 +374,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
+                  style={{ color: node.style.textColor }}
                 />
               ) : (
                 <span
                   className="drafo-node-title"
-                  style={{ fontSize: '13px', fontWeight: 700 }}
+                  style={{ fontSize: '13px', fontWeight: 700, color: node.style.textColor }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -386,11 +398,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleSubtitleSubmit}
                   className="drafo-inline-textarea"
                   rows={2}
+                  style={{ color: node.style.subtextColor }}
                 />
               ) : (
                 <span
                   className="drafo-node-subtitle"
-                  style={{ fontSize: '10.5px', marginTop: 3 }}
+                  style={{ fontSize: '10.5px', marginTop: 3, color: node.style.subtextColor }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingSubtitle(true);
@@ -417,11 +430,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         return (
           <div
             className="drafo-node-desktop-inner"
-            style={{ borderColor: node.style.borderColor || '#475569' }}
+            style={{
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined,
+              borderColor: node.style.borderColor || node.style.accentColor || '#475569'
+            }}
           >
             <div
               className="drafo-desktop-header"
-              style={{ backgroundColor: node.style.headerBg || '#475569' }}
+              style={{ backgroundColor: node.style.accentColor || node.style.headerBg || '#475569' }}
             >
               <div className="drafo-desktop-dots">
                 <span className="dot dot-white" />
@@ -430,7 +446,10 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               </div>
             </div>
 
-            <div className="drafo-desktop-body">
+            <div
+              className="drafo-desktop-body"
+              style={{ backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined }}
+            >
               <div className="drafo-desktop-sidebar-preview" />
               <div className="drafo-desktop-content-preview">
                 <div className="drafo-preview-line line-wide" style={{ backgroundColor: '#94A3B8' }} />
@@ -449,10 +468,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
+                  style={{ color: node.style.textColor }}
                 />
               ) : (
                 <span
                   className="drafo-node-title"
+                  style={{ color: node.style.textColor }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -471,11 +492,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         return (
           <div
             className="drafo-node-terminal-inner"
-            style={{ borderColor: node.style.borderColor || '#0F172A' }}
+            style={{
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined,
+              borderColor: node.style.borderColor || node.style.accentColor || '#0F172A'
+            }}
           >
             <div
               className="drafo-terminal-header"
-              style={{ backgroundColor: node.style.headerBg || '#0F172A' }}
+              style={{ backgroundColor: node.style.accentColor || node.style.headerBg || '#0F172A' }}
             >
               <div className="drafo-terminal-dots">
                 <span className="dot dot-white" />
@@ -484,7 +508,10 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               </div>
             </div>
 
-            <div className="drafo-terminal-body">
+            <div
+              className="drafo-terminal-body"
+              style={{ backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined }}
+            >
               <div className="drafo-terminal-content-preview">
                 <div className="drafo-terminal-prompt-preview">
                   <span className="drafo-terminal-icon-prompt">&gt;_</span>
@@ -505,10 +532,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
+                  style={{ color: node.style.textColor }}
                 />
               ) : (
                 <span
                   className="drafo-node-title"
+                  style={{ color: node.style.textColor }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -527,11 +556,17 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       case 'nosql': {
         const w = node.width;
         const h = node.height;
-        const strokeColor = node.style.borderColor || '#9333EA';
-        const bodyFill = node.style.bg && node.style.bg !== 'auto' ? node.style.bg : '#FAF5FF';
+        const strokeColor = node.style.borderColor || node.style.accentColor || '#2563EB';
+        const bodyFill =
+          node.style.bg && node.style.bg !== 'auto' && node.style.bg !== 'default'
+            ? node.style.bg
+            : '#FFFFFF';
+        const isDarkDb = isColorDark(bodyFill);
         const capFill =
           node.customData?.cylinderCapColor ||
-          (node.style.colorPalette === 'purple' ? '#E9D5FF' : '#E0E7FF');
+          (isDarkDb
+            ? (bodyFill === '#0F172A' ? '#1E293B' : bodyFill)
+            : (bodyFill === '#FFFFFF' ? '#F8FAFC' : bodyFill));
         const borderWidth = node.style.borderWidth || 1.5;
         const ry = Math.min(22, Math.max(10, Math.round(h * 0.13)));
         const rx = Math.max(10, (w - 2) / 2);
@@ -566,14 +601,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 fill="none"
                 stroke={strokeColor}
                 strokeWidth={borderWidth}
-                opacity={0.3}
+                opacity={isDarkDb ? 0.35 : 0.25}
               />
               <path
                 d={`M 1,${h * 0.65} A ${rx},${ry} 0 0,0 ${w - 1},${h * 0.65}`}
                 fill="none"
                 stroke={strokeColor}
                 strokeWidth={borderWidth}
-                opacity={0.3}
+                opacity={isDarkDb ? 0.35 : 0.25}
               />
 
               {/* Top Cap Ellipse with Seamless Tangents */}
@@ -593,7 +628,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               className="drafo-db-perfect-content"
               style={{ paddingTop: `${Math.round(ry * 0.8)}px` }}
             >
-              <div className="drafo-db-icon-pill">
+              <div
+                className="drafo-db-icon-pill"
+                style={{
+                  backgroundColor: isDarkDb ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)',
+                  borderColor: isDarkDb ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  color: strokeColor
+                }}
+              >
                 <Database size={13} color={strokeColor} />
               </div>
               {isEditingTitle ? (
@@ -605,12 +647,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
-                  style={{ textAlign: 'center', fontWeight: 700, color: node.style.textColor }}
+                  style={{ textAlign: 'center', fontWeight: 700, color: node.style.textColor || (isDarkDb ? '#F8FAFC' : '#0F172A') }}
                 />
               ) : (
                 <div
                   className="drafo-node-title db-title"
-                  style={{ color: node.style.textColor || '#0F172A' }}
+                  style={{ color: node.style.textColor || (isDarkDb ? '#F8FAFC' : '#0F172A') }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -624,7 +666,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               {node.subtitle && (
                 <div
                   className="drafo-node-subtitle"
-                  style={{ color: node.style.subtextColor || '#64748B' }}
+                  style={{ color: node.style.subtextColor || (isDarkDb ? '#94A3B8' : '#64748B') }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingSubtitle(true);
@@ -640,8 +682,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
 
       // 6. Cloud VPC / Region Component (Harmonious Organic Architecture Cloud)
       case 'cloud': {
-        const strokeColor = node.style.borderColor || '#4F46E5';
-        const fillColor = node.style.bg && node.style.bg !== 'auto' ? node.style.bg : '#EEF2FF';
+        const strokeColor = node.style.borderColor || node.style.accentColor || '#2563EB';
+        const fillColor =
+          node.style.bg && node.style.bg !== 'auto' && node.style.bg !== 'default'
+            ? node.style.bg
+            : '#FFFFFF';
+        const isDarkCloud = isColorDark(fillColor);
         const borderWidth = node.style.borderWidth || 1.5;
 
         return (
@@ -673,7 +719,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 style={{
                   color: strokeColor,
                   borderColor: strokeColor,
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)'
+                  backgroundColor: isDarkCloud ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.9)'
                 }}
               >
                 <Cloud size={12} strokeWidth={2.2} />
@@ -688,12 +734,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                   className="drafo-inline-input"
-                  style={{ textAlign: 'center', fontWeight: 700, color: node.style.textColor || '#1E1B4B' }}
+                  style={{ textAlign: 'center', fontWeight: 700, color: node.style.textColor || (isDarkCloud ? '#F8FAFC' : '#0F172A') }}
                 />
               ) : (
                 <span
                   className="drafo-node-title"
-                  style={{ fontSize: '13.5px', fontWeight: 700, color: node.style.textColor || '#1E1B4B' }}
+                  style={{ fontSize: '13.5px', fontWeight: 700, color: node.style.textColor || (isDarkCloud ? '#F8FAFC' : '#0F172A') }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingTitle(true);
@@ -707,7 +753,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               {node.subtitle && (
                 <span
                   className="drafo-node-subtitle"
-                  style={{ fontSize: '11px', marginTop: 2, color: node.style.subtextColor || '#4338CA' }}
+                  style={{ fontSize: '11px', marginTop: 2, color: node.style.subtextColor || (isDarkCloud ? '#94A3B8' : '#64748B') }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setIsEditingSubtitle(true);
@@ -725,8 +771,14 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
       // 7. Decision Diamond
       case 'decision':
         return (
-          <div className="drafo-node-decision-inner">
-            <GitFork size={18} color={node.style.textColor || '#D97706'} style={{ marginBottom: 4 }} />
+          <div
+            className="drafo-node-decision-inner"
+            style={{
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined,
+              borderColor: node.style.borderColor || node.style.accentColor
+            }}
+          >
+            <GitFork size={18} color={node.style.textColor || node.style.accentColor || '#D97706'} style={{ marginBottom: 4 }} />
             {isEditingTitle ? (
               <input
                 ref={titleInputRef}
@@ -736,6 +788,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 onBlur={handleTitleSubmit}
                 onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
                 className="drafo-inline-input"
+                style={{ color: node.style.textColor }}
               />
             ) : (
               <span
@@ -758,7 +811,8 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
           <div
             className="drafo-node-note-inner"
             style={{
-              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined
+              backgroundColor: node.style.bg && node.style.bg !== 'auto' ? node.style.bg : undefined,
+              borderColor: node.style.borderColor
             }}
           >
             <div className="drafo-note-pin" />
@@ -768,7 +822,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 type="text"
                 value={tempTitle}
                 className="drafo-inline-input"
-                style={{ fontSize: '12px', marginTop: 4, padding: '2px 4px' }}
+                style={{ fontSize: '12px', marginTop: 4, padding: '2px 4px', color: node.style.textColor }}
                 onChange={(e) => setTempTitle(e.target.value)}
                 onBlur={handleTitleSubmit}
                 onKeyDown={(e) => {
@@ -783,7 +837,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
             ) : (
               <div
                 className="drafo-node-title"
-                style={{ fontSize: '13px', marginTop: 4, cursor: 'text' }}
+                style={{ fontSize: '13px', marginTop: 4, cursor: 'text', color: node.style.textColor }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   setIsEditingTitle(true);
@@ -799,7 +853,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                 value={tempSubtitle}
                 className="drafo-inline-textarea"
                 rows={2}
-                style={{ fontSize: '11px', marginTop: 4, padding: '2px 4px' }}
+                style={{ fontSize: '11px', marginTop: 4, padding: '2px 4px', color: node.style.subtextColor }}
                 onChange={(e) => setTempSubtitle(e.target.value)}
                 onBlur={handleSubtitleSubmit}
                 onKeyDown={(e) => {
@@ -817,7 +871,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
             ) : (
               <div
                 className="drafo-node-subtitle"
-                style={{ fontSize: '11.5px', marginTop: 4, cursor: 'text' }}
+                style={{ fontSize: '11.5px', marginTop: 4, cursor: 'text', color: node.style.subtextColor }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   setIsEditingSubtitle(true);

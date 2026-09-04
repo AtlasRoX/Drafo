@@ -437,10 +437,10 @@
 }
 
 /* ==========================================================================
-   UNIFIED STYLE & APPEARANCE SYSTEM
+   MINIMALIST COLORS & PRESETS SYSTEM
    ========================================================================== */
 
-.drafo-style-section-card {
+.drafo-colors-panel {
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
@@ -451,14 +451,8 @@
   margin-top: 4px;
 }
 
-.drafo-style-card-header {
+.drafo-colors-panel-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.drafo-style-card-title {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
@@ -467,221 +461,76 @@
   letter-spacing: -0.01em;
 }
 
-.drafo-style-subgroup {
+.drafo-colors-subfield {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.drafo-style-subgroup-header {
+.drafo-color-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 10px;
+}
+
+.drafo-color-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 18px;
+  gap: 10px;
 }
 
-.drafo-style-sublabel {
-  font-size: 11px;
+.drafo-color-item-label {
+  font-size: 11.5px;
   font-weight: 600;
   color: #475569;
-  letter-spacing: -0.01em;
 }
 
-.drafo-save-template-pill {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #2563EB;
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  border-radius: 5px;
-  padding: 2px 7px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.drafo-save-template-pill:hover {
-  background: rgba(37, 99, 235, 0.15);
-  border-color: rgba(37, 99, 235, 0.35);
-}
-
-.drafo-save-template-dialog {
+.drafo-color-item-picker-box {
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 6px;
   background: #FFFFFF;
-  padding: 6px 8px;
+  border: 1px solid #CBD5E1;
   border-radius: 6px;
-  border: 1px solid #CBD5E1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 3px 6px;
+  transition: all 0.15s ease;
+  width: 120px;
 }
 
-.drafo-save-template-input {
-  flex: 1;
-  font-size: 11px;
-  padding: 4px 6px;
-  border: 1px solid #CBD5E1;
-  border-radius: 4px;
-  outline: none;
-  color: #0F172A;
-}
-
-.drafo-save-template-input:focus {
+.drafo-color-item-picker-box:focus-within {
   border-color: #2563EB;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-.drafo-save-template-confirm {
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 4px 8px;
-  background: #2563EB;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.drafo-save-template-confirm:hover {
-  background: #1D4ED8;
-}
-
-.drafo-save-template-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.drafo-save-template-cancel {
-  font-size: 10.5px;
-  padding: 4px 6px;
-  background: #F1F5F9;
-  color: #64748B;
-  border: 1px solid #E2E8F0;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.drafo-save-template-cancel:hover {
-  background: #E2E8F0;
-  color: #334155;
-}
-
-/* Color Controls */
-.drafo-color-control-row {
+.drafo-color-chip-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-}
-
-.drafo-color-picker-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  padding: 4px 8px;
   cursor: pointer;
-  position: relative;
-  transition: all 0.15s ease;
-  user-select: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.drafo-color-picker-pill:hover {
-  border-color: #2563EB;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
-}
-
-.drafo-color-pill-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  position: relative;
 }
 
-.drafo-color-pill-text {
+.drafo-color-chip-preview {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  display: block;
+}
+
+.drafo-color-hex-text-input {
+  border: none;
+  background: transparent;
+  outline: none;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  font-weight: 700;
-  color: #334155;
-  letter-spacing: -0.02em;
-}
-
-/* Curated Designer Dots Bar */
-.drafo-curated-dots-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 5px;
-  width: 100%;
-  padding: 2px 0;
-}
-
-.drafo-quick-dot-btn {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.drafo-quick-dot-btn:hover {
-  transform: scale(1.18);
-}
-
-.drafo-quick-dot-btn.active {
-  border-color: #0F172A;
-  transform: scale(1.12);
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.25);
-}
-
-/* Background Shortcuts Grid: Exactly 4 equal 25% columns */
-.drafo-bg-shortcuts-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  width: 100%;
-}
-
-.drafo-bg-shortcut-btn {
-  font-size: 10.5px;
   font-weight: 600;
-  color: #64748B;
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  padding: 5px 0;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  user-select: none;
-}
-
-.drafo-bg-shortcut-btn:hover {
-  background: #F1F5F9;
-  color: #1E293B;
-  border-color: #94A3B8;
-}
-
-.drafo-bg-shortcut-btn.active {
-  background: #2563EB;
-  color: #FFFFFF;
-  border-color: #2563EB;
-  font-weight: 700;
+  color: #334155;
+  width: 100%;
+  padding: 0;
 }
 
 

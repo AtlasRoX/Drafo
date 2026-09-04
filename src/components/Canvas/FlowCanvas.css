@@ -357,7 +357,7 @@
   height: 100%;
   pointer-events: none;
   overflow: visible;
-  filter: drop-shadow(0 4px 12px rgba(147, 51, 234, 0.08));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .drafo-db-perfect-content {
