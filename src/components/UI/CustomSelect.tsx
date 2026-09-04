@@ -130,9 +130,6 @@ export function CustomSelect<T extends string = string>({
                 />
               )}
               <span className="drafo-select-item-label">{selectedOption.label}</span>
-              {selectedOption.sublabel && (
-                <span className="drafo-select-item-sublabel">({selectedOption.sublabel})</span>
-              )}
             </>
           ) : (
             <span className="drafo-select-placeholder">{placeholder}</span>

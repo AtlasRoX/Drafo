@@ -536,9 +536,11 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             />
 
             {/* Quick Batch Background Presets */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>Batch Background Fill</span>
-              <div className="drafo-quick-shortcuts-row">
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+                Batch Background Fill
+              </div>
+              <div className="drafo-bg-shortcuts-grid">
                 {[
                   { label: 'Auto', val: 'auto' },
                   { label: 'White', val: '#FFFFFF' },
@@ -548,7 +550,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   <button
                     key={item.val}
                     type="button"
-                    className="drafo-quick-shortcut-btn"
+                    className="drafo-bg-shortcut-btn"
                     onClick={() => {
                       const targetSet = new Set(selectedIds);
                       const updatedNodes = project.nodes.map((n) =>
@@ -788,69 +790,67 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               ========================================================================= */}
           <div className="drafo-form-field">
             <div className="drafo-style-section-card">
-              {/* Card Header: Title & Save Custom Template Action */}
-              <div className="drafo-style-subgroup-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Palette size={14} color="#2563EB" />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1E293B' }}>Style & Appearance</span>
+              {/* Card Header: Pure Title */}
+              <div className="drafo-style-card-header">
+                <div className="drafo-style-card-title">
+                  <Palette size={13} color="#2563EB" />
+                  <span>Style & Appearance</span>
                 </div>
-                {!isSavingTemplate ? (
-                  <button
-                    type="button"
-                    className="drafo-save-template-btn"
-                    onClick={() => setIsSavingTemplate(true)}
-                    title="Save current styling as a reusable template"
-                  >
-                    <BookmarkPlus size={11} />
-                    <span>Save Template</span>
-                  </button>
-                ) : null}
               </div>
 
-              {/* Inline Save Template Form */}
-              {isSavingTemplate && (
-                <div className="drafo-save-template-dialog">
-                  <input
-                    type="text"
-                    className="drafo-save-template-input"
-                    placeholder="Template name (e.g. Neon Cyber)"
-                    value={newTemplateName}
-                    onChange={(e) => setNewTemplateName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveCustomTemplate();
-                      if (e.key === 'Escape') setIsSavingTemplate(false);
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="drafo-save-template-confirm"
-                    onClick={handleSaveCustomTemplate}
-                    disabled={!newTemplateName.trim()}
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    className="drafo-save-template-cancel"
-                    onClick={() => {
-                      setIsSavingTemplate(false);
-                      setNewTemplateName('');
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {/* 1. Style Template Dropdown */}
+              {/* 1. Theme / Preset Selector */}
               <div className="drafo-style-subgroup">
-                <div className="drafo-style-sublabel">
-                  <span>Theme / Template</span>
-                  <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 500 }}>
-                    1-Click Presets & Custom
-                  </span>
+                <div className="drafo-style-subgroup-header">
+                  <span className="drafo-style-sublabel">Theme / Preset</span>
+                  {!isSavingTemplate && (
+                    <button
+                      type="button"
+                      className="drafo-save-template-pill"
+                      onClick={() => setIsSavingTemplate(true)}
+                      title="Save current styling as a reusable template"
+                    >
+                      <BookmarkPlus size={11} />
+                      <span>+ Save Preset</span>
+                    </button>
+                  )}
                 </div>
+
+                {/* Inline Save Template Form */}
+                {isSavingTemplate && (
+                  <div className="drafo-save-template-dialog">
+                    <input
+                      type="text"
+                      className="drafo-save-template-input"
+                      placeholder="Template name (e.g. Neon Cyber)"
+                      value={newTemplateName}
+                      onChange={(e) => setNewTemplateName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveCustomTemplate();
+                        if (e.key === 'Escape') setIsSavingTemplate(false);
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="drafo-save-template-confirm"
+                      onClick={handleSaveCustomTemplate}
+                      disabled={!newTemplateName.trim()}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="drafo-save-template-cancel"
+                      onClick={() => {
+                        setIsSavingTemplate(false);
+                        setNewTemplateName('');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
                 <CustomSelect
                   value={
                     allStyleTemplates.find(
@@ -861,14 +861,18 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   }
                   onChange={(val) => applyStyleTemplate(val)}
                   options={templateOptions}
-                  placeholder="Select a style preset..."
+                  placeholder={
+                    selectedNode.style.accentColor || selectedNode.style.bg
+                      ? "Custom Style (Pick to change)"
+                      : "Choose a theme preset..."
+                  }
                 />
               </div>
 
               {/* 2. Accent Color & Tint */}
               <div className="drafo-style-subgroup">
                 <div className="drafo-style-subgroup-header">
-                  <span className="drafo-style-sublabel">Accent & Focus</span>
+                  <span className="drafo-style-sublabel">Accent & Tone</span>
                   {selectedNode.style.accentColor && (
                     <button
                       type="button"
@@ -880,16 +884,20 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                     </button>
                   )}
                 </div>
+
+                {/* Custom Hex Color Picker Pill (Row 1) */}
                 <div className="drafo-color-control-row">
-                  {/* Custom Hex Color Picker Pill */}
-                  <label className="drafo-color-picker-pill" title="Click to choose custom accent hex">
-                    <span
-                      className="drafo-color-pill-dot"
-                      style={{ backgroundColor: selectedNode.style.accentColor || '#2563EB' }}
-                    />
-                    <span className="drafo-color-pill-text">
-                      {selectedNode.style.accentColor || '#2563EB'}
-                    </span>
+                  <label className="drafo-color-picker-pill" style={{ width: '100%', justifyContent: 'space-between' }} title="Click to choose custom accent hex">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span
+                        className="drafo-color-pill-dot"
+                        style={{ backgroundColor: selectedNode.style.accentColor || '#2563EB' }}
+                      />
+                      <span className="drafo-color-pill-text">
+                        {selectedNode.style.accentColor || '#2563EB'}
+                      </span>
+                    </div>
+                    <Pipette size={12} color="#64748B" />
                     <input
                       type="color"
                       value={selectedNode.style.accentColor || '#2563EB'}
@@ -903,39 +911,44 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                       className="drafo-color-native-hidden"
                     />
                   </label>
-
-                  {/* 6 Essential Quick Dots */}
-                  <div className="drafo-quick-dots-row">
-                    {[
-                      { hex: '#2563EB', name: 'Blue' },
-                      { hex: '#7C3AED', name: 'Purple' },
-                      { hex: '#059669', name: 'Emerald' },
-                      { hex: '#D97706', name: 'Amber' },
-                      { hex: '#E11D48', name: 'Rose' },
-                      { hex: '#0F172A', name: 'Slate' }
-                    ].map((dot) => {
-                      const isActive = (selectedNode.style.accentColor || '#2563EB').toLowerCase() === dot.hex.toLowerCase();
-                      return (
-                        <button
-                          key={dot.hex}
-                          type="button"
-                          className={`drafo-quick-dot-btn ${isActive ? 'active' : ''}`}
-                          style={{ backgroundColor: dot.hex }}
-                          onClick={() =>
-                            updateNodeStyle({
-                              accentColor: dot.hex,
-                              borderColor: dot.hex,
-                              tint: selectedNode.style.tint || 'subtle'
-                            })
-                          }
-                          title={`${dot.name} (${dot.hex})`}
-                        />
-                      );
-                    })}
-                  </div>
                 </div>
 
-                {/* Surface Tint Switcher */}
+                {/* 8 Curated Designer Dots (Row 2: Full Width) */}
+                <div className="drafo-curated-dots-bar">
+                  {[
+                    { hex: '#2563EB', name: 'Cobalt Blue' },
+                    { hex: '#0284C7', name: 'Cyan Sky' },
+                    { hex: '#10B981', name: 'Emerald' },
+                    { hex: '#8B5CF6', name: 'Violet' },
+                    { hex: '#F59E0B', name: 'Amber' },
+                    { hex: '#F43F5E', name: 'Rose' },
+                    { hex: '#475569', name: 'Slate' },
+                    { hex: '#0F172A', name: 'Obsidian' }
+                  ].map((dot) => {
+                    const currentAccent = (selectedNode.style.accentColor || '#2563EB').toLowerCase();
+                    const isActive = currentAccent === dot.hex.toLowerCase() || (dot.hex === '#0284C7' && currentAccent === '#38bdf8');
+                    return (
+                      <button
+                        key={dot.hex}
+                        type="button"
+                        className={`drafo-quick-dot-btn ${isActive ? 'active' : ''}`}
+                        style={{ backgroundColor: dot.hex }}
+                        onClick={() =>
+                          updateNodeStyle({
+                            accentColor: dot.hex,
+                            borderColor: dot.hex,
+                            tint: selectedNode.style.tint || 'subtle'
+                          })
+                        }
+                        title={`${dot.name} (${dot.hex})`}
+                      >
+                        {isActive && <Check size={11} color="#FFFFFF" strokeWidth={3} />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Surface Tint Switcher (Row 3) */}
                 <div style={{ marginTop: 2 }}>
                   <div className="drafo-segmented-control">
                     {(['none', 'subtle', 'medium', 'strong'] as const).map((t) => {
@@ -966,32 +979,36 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                       onClick={() => updateNodeStyle({ bg: 'auto' })}
                       title="Reset to Auto Tint"
                     >
-                      Auto
+                      Reset to Auto
                     </button>
                   )}
                 </div>
+
+                {/* Custom Hex Color Picker Pill (Row 1) */}
                 <div className="drafo-color-control-row">
-                  {/* Custom Hex Color Picker Pill */}
-                  <label className="drafo-color-picker-pill" title="Click to choose custom background hex">
-                    <span
-                      className="drafo-color-pill-dot"
-                      style={{
-                        backgroundColor:
-                          !selectedNode.style.bg || selectedNode.style.bg === 'auto'
-                            ? '#F8FAFC'
-                            : selectedNode.style.bg === 'transparent'
-                            ? 'transparent'
-                            : selectedNode.style.bg,
-                        border: '1px solid #CBD5E1'
-                      }}
-                    />
-                    <span className="drafo-color-pill-text">
-                      {!selectedNode.style.bg || selectedNode.style.bg === 'auto'
-                        ? 'Auto'
-                        : selectedNode.style.bg === 'transparent'
-                        ? 'Clear'
-                        : selectedNode.style.bg}
-                    </span>
+                  <label className="drafo-color-picker-pill" style={{ width: '100%', justifyContent: 'space-between' }} title="Click to choose custom background hex">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span
+                        className="drafo-color-pill-dot"
+                        style={{
+                          backgroundColor:
+                            !selectedNode.style.bg || selectedNode.style.bg === 'auto'
+                              ? '#F8FAFC'
+                              : selectedNode.style.bg === 'transparent'
+                              ? 'transparent'
+                              : selectedNode.style.bg,
+                          border: '1px solid #CBD5E1'
+                        }}
+                      />
+                      <span className="drafo-color-pill-text">
+                        {!selectedNode.style.bg || selectedNode.style.bg === 'auto'
+                          ? 'Auto Tint'
+                          : selectedNode.style.bg === 'transparent'
+                          ? 'Transparent / Clear'
+                          : selectedNode.style.bg}
+                      </span>
+                    </div>
+                    <Pipette size={12} color="#64748B" />
                     <input
                       type="color"
                       value={
@@ -1003,29 +1020,29 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                       className="drafo-color-native-hidden"
                     />
                   </label>
+                </div>
 
-                  {/* 4 Essential Quick Shortcuts */}
-                  <div className="drafo-quick-shortcuts-row">
-                    {[
-                      { label: 'Auto', value: 'auto' },
-                      { label: 'White', value: '#FFFFFF' },
-                      { label: 'Dark', value: '#0F172A' },
-                      { label: 'Clear', value: 'transparent' }
-                    ].map((sc) => {
-                      const currentBg = selectedNode.style.bg || 'auto';
-                      const isActive = currentBg.toLowerCase() === sc.value.toLowerCase();
-                      return (
-                        <button
-                          key={sc.value}
-                          type="button"
-                          className={`drafo-quick-shortcut-btn ${isActive ? 'active' : ''}`}
-                          onClick={() => updateNodeStyle({ bg: sc.value })}
-                        >
-                          {sc.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* 4 Essential Quick Shortcuts (Row 2: 4 equal 25% columns) */}
+                <div className="drafo-bg-shortcuts-grid">
+                  {[
+                    { label: 'Auto', value: 'auto' },
+                    { label: 'White', value: '#FFFFFF' },
+                    { label: 'Dark', value: '#0F172A' },
+                    { label: 'Clear', value: 'transparent' }
+                  ].map((sc) => {
+                    const currentBg = selectedNode.style.bg || 'auto';
+                    const isActive = currentBg.toLowerCase() === sc.value.toLowerCase();
+                    return (
+                      <button
+                        key={sc.value}
+                        type="button"
+                        className={`drafo-bg-shortcut-btn ${isActive ? 'active' : ''}`}
+                        onClick={() => updateNodeStyle({ bg: sc.value })}
+                      >
+                        {sc.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
