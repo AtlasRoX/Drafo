@@ -74,10 +74,12 @@ export function calculateEdgePath(
   fromPort: PortPosition,
   toPort: PortPosition,
   routeType: RouteType,
-  controlPoint?: Point
+  controlPoint?: Point,
+  sourcePointOverride?: Point,
+  targetPointOverride?: Point
 ): EdgePathData {
-  const p1 = getPortCoordinates(sourceNode, fromPort);
-  const p2 = getPortCoordinates(targetNode, toPort);
+  const p1 = sourcePointOverride || getPortCoordinates(sourceNode, fromPort);
+  const p2 = targetPointOverride || getPortCoordinates(targetNode, toPort);
 
   if (routeType === 'straight') {
     if (controlPoint) {
@@ -94,12 +96,32 @@ export function calculateEdgePath(
   }
 
   if (routeType === 'curved') {
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const curvature = Math.max(24, Math.min(dist * 0.4, 110));
+
+    let t1x = 0;
+    let t1y = 0;
+    if (fromPort === 'right') t1x = curvature;
+    else if (fromPort === 'left') t1x = -curvature;
+    else if (fromPort === 'bottom') t1y = curvature;
+    else if (fromPort === 'top') t1y = -curvature;
+
+    let t2x = 0;
+    let t2y = 0;
+    if (toPort === 'right') t2x = curvature;
+    else if (toPort === 'left') t2x = -curvature;
+    else if (toPort === 'bottom') t2y = curvature;
+    else if (toPort === 'top') t2y = -curvature;
+
     if (controlPoint) {
-      // Quadratic Bezier passing smoothly through controlPoint:
-      // At t=0.5, B(0.5) reaches controlPoint exactly.
-      const cpX = 2 * controlPoint.x - (p1.x + p2.x) / 2;
-      const cpY = 2 * controlPoint.y - (p1.y + p2.y) / 2;
-      const path = `M ${p1.x} ${p1.y} Q ${cpX} ${cpY}, ${p2.x} ${p2.y}`;
+      // Canva-style smooth cubic Bezier passing gracefully toward controlPoint
+      // Tangents at p1 and p2 ensure smooth node exit/entry without inverted loops
+      const cp1x = p1.x + t1x * 0.6 + (controlPoint.x - p1.x) * 0.65;
+      const cp1y = p1.y + t1y * 0.6 + (controlPoint.y - p1.y) * 0.65;
+      const cp2x = p2.x + t2x * 0.6 + (controlPoint.x - p2.x) * 0.65;
+      const cp2y = p2.y + t2y * 0.6 + (controlPoint.y - p2.y) * 0.65;
+
+      const path = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
       const labelPosition = {
         x: controlPoint.x,
         y: controlPoint.y - 14
@@ -107,27 +129,13 @@ export function calculateEdgePath(
       return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
     }
 
-    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const curvature = Math.max(25, Math.min(dist * 0.45, 120));
-
-    let cp1x = p1.x;
-    let cp1y = p1.y;
-    let cp2x = p2.x;
-    let cp2y = p2.y;
-
-    if (fromPort === 'right') cp1x += curvature;
-    else if (fromPort === 'left') cp1x -= curvature;
-    else if (fromPort === 'bottom') cp1y += curvature;
-    else if (fromPort === 'top') cp1y -= curvature;
-
-    if (toPort === 'right') cp2x += curvature;
-    else if (toPort === 'left') cp2x -= curvature;
-    else if (toPort === 'bottom') cp2y += curvature;
-    else if (toPort === 'top') cp2y -= curvature;
+    const cp1x = p1.x + t1x;
+    const cp1y = p1.y + t1y;
+    const cp2x = p2.x + t2x;
+    const cp2y = p2.y + t2y;
 
     const path = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     // Mathematically exact cubic Bezier midpoint at t = 0.5:
-    // B(0.5) = 0.125 * p1 + 0.375 * cp1 + 0.375 * cp2 + 0.125 * p2
     const labelPosition = {
       x: Math.round(0.125 * p1.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * p2.x),
       y: Math.round(0.125 * p1.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * p2.y) - 14
@@ -141,20 +149,26 @@ export function calculateEdgePath(
     const isHorizontalExit = fromPort === 'left' || fromPort === 'right';
     const isHorizontalEntry = toPort === 'left' || toPort === 'right';
 
+    let activeHandlePoint: Point = controlPoint;
+
     if (isHorizontalExit && isHorizontalEntry) {
+      const midY = (p1.y + p2.y) / 2;
       points = [
         p1,
         { x: controlPoint.x, y: p1.y },
         { x: controlPoint.x, y: p2.y },
         p2
       ];
+      activeHandlePoint = { x: controlPoint.x, y: midY };
     } else if (!isHorizontalExit && !isHorizontalEntry) {
+      const midX = (p1.x + p2.x) / 2;
       points = [
         p1,
         { x: p1.x, y: controlPoint.y },
         { x: p2.x, y: controlPoint.y },
         p2
       ];
+      activeHandlePoint = { x: midX, y: controlPoint.y };
     } else if (isHorizontalExit && !isHorizontalEntry) {
       points = [
         p1,
@@ -162,6 +176,7 @@ export function calculateEdgePath(
         { x: controlPoint.x, y: p2.y },
         p2
       ];
+      activeHandlePoint = { x: controlPoint.x, y: (p1.y + p2.y) / 2 };
     } else {
       points = [
         p1,
@@ -169,10 +184,11 @@ export function calculateEdgePath(
         { x: p2.x, y: controlPoint.y },
         p2
       ];
+      activeHandlePoint = { x: (p1.x + p2.x) / 2, y: controlPoint.y };
     }
 
     const pathStr = pointsToRoundedPath(points, 10);
-    const labelPosition = { x: controlPoint.x, y: controlPoint.y - 14 };
+    const labelPosition = { x: activeHandlePoint.x, y: activeHandlePoint.y - 14 };
     return { path: pathStr, labelPosition, sourcePoint: p1, targetPoint: p2 };
   }
 

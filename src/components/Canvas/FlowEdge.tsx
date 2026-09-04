@@ -10,6 +10,7 @@ interface FlowEdgeProps {
   targetNode: FlowNode;
   isSelected: boolean;
   isSimActive?: boolean;
+  dragEndpointPos?: { endpoint: 'source' | 'target'; point: { x: number; y: number } } | null;
   onSelect: (edgeId: string, e: React.MouseEvent) => void;
   onUpdate: (updatedEdge: FlowEdgeType) => void;
   onDelete?: (edgeId: string) => void;
@@ -23,6 +24,7 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
   targetNode,
   isSelected,
   isSimActive,
+  dragEndpointPos,
   onSelect,
   onUpdate,
   onDelete,
@@ -50,13 +52,20 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
     onUpdate({ ...edge, label: tempLabel });
   };
 
+  const sourceOverride =
+    dragEndpointPos?.endpoint === 'source' ? dragEndpointPos.point : undefined;
+  const targetOverride =
+    dragEndpointPos?.endpoint === 'target' ? dragEndpointPos.point : undefined;
+
   const { path, labelPosition, sourcePoint, targetPoint } = calculateEdgePath(
     sourceNode,
     targetNode,
     edge.fromPort,
     edge.toPort,
     edge.routeType,
-    edge.controlPoint
+    edge.controlPoint,
+    sourceOverride,
+    targetOverride
   );
 
   const strokeColor = isSelected ? '#2563EB' : edge.color || '#000000';
@@ -88,7 +97,14 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
       className={`drafo-flow-edge ${isSelected ? 'selected' : ''} ${
         isSimActive ? 'sim-active' : ''
       } ${edge.isAnimated ? 'is-animated-edge' : ''} ${isHovered ? 'hovered' : ''}`}
-      onClick={(e) => onSelect(edge.id, e)}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        onSelect(edge.id, e);
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(edge.id, e);
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{ cursor: 'pointer' }}
@@ -211,127 +227,148 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
           )}
         </g>
       )}
+    </g>
+  );
+};
 
-      {/* Canva-Style Connection Control Handles (Visible when edge is selected) */}
-      {isSelected && (
-        <g className="drafo-canva-edge-controls">
-          {/* 1. Start Endpoint Handle (Drag to reconnect or snap start) */}
-          <g className="drafo-canva-handle-group">
-            <circle
-              cx={sourcePoint.x}
-              cy={sourcePoint.y}
-              r={14}
-              fill="transparent"
-              style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragEndpoint?.(edge.id, 'source', e);
-              }}
-            />
-            <circle
-              cx={sourcePoint.x}
-              cy={sourcePoint.y}
-              r={5.5}
-              fill="#FFFFFF"
-              stroke="#2563EB"
-              strokeWidth={2.5}
-              className="drafo-canva-endpoint-handle"
-              style={{
-                cursor: 'crosshair',
-                filter: 'drop-shadow(0 2px 5px rgba(37, 99, 235, 0.35))'
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragEndpoint?.(edge.id, 'source', e);
-              }}
-            />
-          </g>
+export interface FlowEdgeHandlesProps {
+  edge: FlowEdgeType;
+  sourcePoint: { x: number; y: number };
+  targetPoint: { x: number; y: number };
+  labelPosition: { x: number; y: number };
+  onStartDragWaypoint?: (edgeId: string, e: React.MouseEvent) => void;
+  onStartDragEndpoint?: (edgeId: string, endpoint: 'source' | 'target', e: React.MouseEvent) => void;
+  onResetWaypoint?: (edgeId: string) => void;
+}
 
-          {/* 2. End Endpoint Handle (Drag to reconnect or snap end) */}
-          <g className="drafo-canva-handle-group">
-            <circle
-              cx={targetPoint.x}
-              cy={targetPoint.y}
-              r={14}
-              fill="transparent"
-              style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragEndpoint?.(edge.id, 'target', e);
-              }}
-            />
-            <circle
-              cx={targetPoint.x}
-              cy={targetPoint.y}
-              r={5.5}
-              fill="#FFFFFF"
-              stroke="#2563EB"
-              strokeWidth={2.5}
-              className="drafo-canva-endpoint-handle"
-              style={{
-                cursor: 'crosshair',
-                filter: 'drop-shadow(0 2px 5px rgba(37, 99, 235, 0.35))'
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragEndpoint?.(edge.id, 'target', e);
-              }}
-            />
-          </g>
+export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
+  edge,
+  sourcePoint,
+  targetPoint,
+  labelPosition,
+  onStartDragWaypoint,
+  onStartDragEndpoint,
+  onResetWaypoint
+}) => {
+  const waypointPos = edge.controlPoint ? edge.controlPoint : labelPosition;
 
-          {/* 3. Canva Curvature & Elbow Waypoint Handle */}
-          <g className="drafo-canva-handle-group">
-            {edge.controlPoint && (
-              <line
-                x1={labelPosition.x}
-                y1={labelPosition.y}
-                x2={edge.controlPoint.x}
-                y2={edge.controlPoint.y}
-                stroke="#93C5FD"
-                strokeWidth={1}
-                strokeDasharray="2,2"
-                pointerEvents="none"
-              />
-            )}
-            <circle
-              cx={edge.controlPoint ? edge.controlPoint.x : labelPosition.x}
-              cy={edge.controlPoint ? edge.controlPoint.y : labelPosition.y + (edge.label ? 0 : 12)}
-              r={16}
-              fill="transparent"
-              style={{ cursor: 'grab' }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragWaypoint?.(edge.id, e);
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                onUpdate({ ...edge, controlPoint: undefined });
-              }}
-            />
-            <circle
-              cx={edge.controlPoint ? edge.controlPoint.x : labelPosition.x}
-              cy={edge.controlPoint ? edge.controlPoint.y : labelPosition.y + (edge.label ? 0 : 12)}
-              r={6.5}
-              fill="#FFFFFF"
-              stroke="#2563EB"
-              strokeWidth={2.5}
-              className="drafo-canva-waypoint-handle"
-              style={{
-                cursor: 'grab',
-                filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.4))'
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartDragWaypoint?.(edge.id, e);
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                onUpdate({ ...edge, controlPoint: undefined });
-              }}
-            />
-          </g>
-        </g>
-      )}
+  return (
+    <g className="drafo-canva-edge-controls" style={{ pointerEvents: 'auto' }}>
+      {/* 1. Start Endpoint Handle (Drag to reconnect or snap start) */}
+      <g className="drafo-canva-handle-group">
+        <circle
+          cx={sourcePoint.x}
+          cy={sourcePoint.y}
+          r={16}
+          fill="transparent"
+          style={{ cursor: 'crosshair' }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragEndpoint?.(edge.id, 'source', e);
+          }}
+        />
+        <circle
+          cx={sourcePoint.x}
+          cy={sourcePoint.y}
+          r={6}
+          fill="#FFFFFF"
+          stroke="#2563EB"
+          strokeWidth={2.5}
+          className="drafo-canva-endpoint-handle"
+          style={{
+            cursor: 'crosshair',
+            filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragEndpoint?.(edge.id, 'source', e);
+          }}
+        />
+      </g>
+
+      {/* 2. End Endpoint Handle (Drag to reconnect or snap end) */}
+      <g className="drafo-canva-handle-group">
+        <circle
+          cx={targetPoint.x}
+          cy={targetPoint.y}
+          r={16}
+          fill="transparent"
+          style={{ cursor: 'crosshair' }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragEndpoint?.(edge.id, 'target', e);
+          }}
+        />
+        <circle
+          cx={targetPoint.x}
+          cy={targetPoint.y}
+          r={6}
+          fill="#FFFFFF"
+          stroke="#2563EB"
+          strokeWidth={2.5}
+          className="drafo-canva-endpoint-handle"
+          style={{
+            cursor: 'crosshair',
+            filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragEndpoint?.(edge.id, 'target', e);
+          }}
+        />
+      </g>
+
+      {/* 3. Canva Curvature & Elbow Waypoint Handle */}
+      <g className="drafo-canva-handle-group">
+        {edge.controlPoint && (
+          <line
+            x1={labelPosition.x}
+            y1={labelPosition.y}
+            x2={waypointPos.x}
+            y2={waypointPos.y}
+            stroke="#93C5FD"
+            strokeWidth={1.5}
+            strokeDasharray="2,2"
+            pointerEvents="none"
+          />
+        )}
+        <circle
+          cx={waypointPos.x}
+          cy={waypointPos.y}
+          r={18}
+          fill="transparent"
+          style={{ cursor: 'grab' }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragWaypoint?.(edge.id, e);
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onResetWaypoint?.(edge.id);
+          }}
+        />
+        <circle
+          cx={waypointPos.x}
+          cy={waypointPos.y}
+          r={7}
+          fill="#FFFFFF"
+          stroke="#2563EB"
+          strokeWidth={2.5}
+          className="drafo-canva-waypoint-handle"
+          style={{
+            cursor: 'grab',
+            filter: 'drop-shadow(0 2px 8px rgba(37, 99, 235, 0.5))'
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartDragWaypoint?.(edge.id, e);
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onResetWaypoint?.(edge.id);
+          }}
+        />
+      </g>
     </g>
   );
 };
