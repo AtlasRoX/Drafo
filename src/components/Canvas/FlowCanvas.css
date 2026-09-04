@@ -71,7 +71,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 35;
+  z-index: 100 !important;
 }
 
 .drafo-canvas-handles-overlay .drafo-canva-edge-controls,
@@ -872,7 +872,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 50;
+  z-index: 25;
 }
 
 .drafo-port {
@@ -887,7 +887,7 @@
   opacity: 0;
   transform: translate(-50%, -50%);
   transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
-  z-index: 55;
+  z-index: 26;
 }
 
 /* Generous 27px hit area so users can easily click or drag from the dot instantly */
@@ -1129,6 +1129,7 @@
   border-style: dashed;
   cursor: grab;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+  z-index: 5 !important;
 }
 
 .drafo-flow-node.is-container-node:hover {

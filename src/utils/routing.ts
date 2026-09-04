@@ -10,6 +10,7 @@ export interface EdgePathData {
   labelPosition: Point;
   sourcePoint: Point;
   targetPoint: Point;
+  waypointPosition: Point;
 }
 
 export function getPortCoordinates(node: FlowNode, port: PortPosition): Point {
@@ -85,14 +86,15 @@ export function calculateEdgePath(
     if (controlPoint) {
       const path = `M ${p1.x} ${p1.y} L ${controlPoint.x} ${controlPoint.y} L ${p2.x} ${p2.y}`;
       const labelPosition = { x: controlPoint.x, y: controlPoint.y - 14 };
-      return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+      return { path, labelPosition, sourcePoint: p1, targetPoint: p2, waypointPosition: controlPoint };
     }
     const path = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+    const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
     const labelPosition = {
-      x: (p1.x + p2.x) / 2,
-      y: (p1.y + p2.y) / 2 - 12
+      x: mid.x,
+      y: mid.y - 12
     };
-    return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+    return { path, labelPosition, sourcePoint: p1, targetPoint: p2, waypointPosition: mid };
   }
 
   if (routeType === 'curved') {
@@ -115,7 +117,6 @@ export function calculateEdgePath(
 
     if (controlPoint) {
       // Canva-style smooth cubic Bezier passing gracefully toward controlPoint
-      // Tangents at p1 and p2 ensure smooth node exit/entry without inverted loops
       const cp1x = p1.x + t1x * 0.6 + (controlPoint.x - p1.x) * 0.65;
       const cp1y = p1.y + t1y * 0.6 + (controlPoint.y - p1.y) * 0.65;
       const cp2x = p2.x + t2x * 0.6 + (controlPoint.x - p2.x) * 0.65;
@@ -126,7 +127,7 @@ export function calculateEdgePath(
         x: controlPoint.x,
         y: controlPoint.y - 14
       };
-      return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+      return { path, labelPosition, sourcePoint: p1, targetPoint: p2, waypointPosition: controlPoint };
     }
 
     const cp1x = p1.x + t1x;
@@ -136,11 +137,13 @@ export function calculateEdgePath(
 
     const path = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     // Mathematically exact cubic Bezier midpoint at t = 0.5:
+    const midX = Math.round(0.125 * p1.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * p2.x);
+    const midY = Math.round(0.125 * p1.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * p2.y);
     const labelPosition = {
-      x: Math.round(0.125 * p1.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * p2.x),
-      y: Math.round(0.125 * p1.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * p2.y) - 14
+      x: midX,
+      y: midY - 14
     };
-    return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+    return { path, labelPosition, sourcePoint: p1, targetPoint: p2, waypointPosition: { x: midX, y: midY } };
   }
 
   // Orthogonal (Smart Step routing)
@@ -189,7 +192,7 @@ export function calculateEdgePath(
 
     const pathStr = pointsToRoundedPath(points, 10);
     const labelPosition = { x: activeHandlePoint.x, y: activeHandlePoint.y - 14 };
-    return { path: pathStr, labelPosition, sourcePoint: p1, targetPoint: p2 };
+    return { path: pathStr, labelPosition, sourcePoint: p1, targetPoint: p2, waypointPosition: activeHandlePoint };
   }
 
   const clearance = 24;
@@ -295,10 +298,11 @@ export function calculateEdgePath(
   // Build SVG path with Canva-style smooth rounded corners
   const pathStr = pointsToRoundedPath(points, 10);
 
-  // Compute best midpoint for label
+  // Compute best midpoint for label and waypoint handle
   let midPoint: Point = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 - 14 };
+  let waypointCenter: Point = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   if (points.length >= 3) {
-    // Place label on longest middle segment
+    // Place handle on longest middle segment
     let maxSegLen = 0;
     let bestSegIdx = 0;
     for (let i = 0; i < points.length - 1; i++) {
@@ -308,9 +312,13 @@ export function calculateEdgePath(
         bestSegIdx = i;
       }
     }
-    midPoint = {
+    waypointCenter = {
       x: (points[bestSegIdx].x + points[bestSegIdx + 1].x) / 2,
-      y: (points[bestSegIdx].y + points[bestSegIdx + 1].y) / 2 - 12
+      y: (points[bestSegIdx].y + points[bestSegIdx + 1].y) / 2
+    };
+    midPoint = {
+      x: waypointCenter.x,
+      y: waypointCenter.y - 12
     };
   }
 
@@ -318,6 +326,7 @@ export function calculateEdgePath(
     path: pathStr,
     labelPosition: midPoint,
     sourcePoint: p1,
-    targetPoint: p2
+    targetPoint: p2,
+    waypointPosition: waypointCenter
   };
 }

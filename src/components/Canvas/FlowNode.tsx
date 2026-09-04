@@ -1074,20 +1074,22 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
         </>
       )}
 
-      {/* Interactive Connection Ports (Top, Right, Bottom, Left) - Always clickable! */}
-      <div className="drafo-node-ports">
-        {ports.map((port) => (
-          <div
-            key={port}
-            className={`drafo-port port-${port}`}
-            title={`Drag to connect from ${port}`}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onStartConnect(node.id, port, e);
-            }}
-          />
-        ))}
-      </div>
+      {/* Interactive Connection Ports (Top, Right, Bottom, Left) - Only for regular nodes, never container/group zones */}
+      {!isContainer && (
+        <div className="drafo-node-ports">
+          {ports.map((port) => (
+            <div
+              key={port}
+              className={`drafo-port port-${port}`}
+              title={`Drag to connect from ${port}`}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onStartConnect(node.id, port, e);
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -192,6 +192,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const rafWheelIdRef = useRef<number | null>(null);
   const wheelAccRef = useRef({ dx: 0, dy: 0, pinch: 0, mouseX: 0, mouseY: 0 });
 
+  const draggingEdgeEndpointRef = useRef(draggingEdgeEndpoint);
+  draggingEdgeEndpointRef.current = draggingEdgeEndpoint;
+  const magneticTargetRef = useRef(magneticTarget);
+  magneticTargetRef.current = magneticTarget;
+  const connectingRef = useRef(connecting);
+  connectingRef.current = connecting;
+  const draggingWaypointRef = useRef(draggingWaypoint);
+  draggingWaypointRef.current = draggingWaypoint;
+
   // Track space key for panning, V/H for tool mode, M for mini-map
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -415,7 +424,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const handleStartConnect = (nodeId: string, port: PortPosition, e: React.MouseEvent) => {
     e.stopPropagation();
     const targetNode = project.nodes.find((n) => n.id === nodeId);
-    if (!targetNode) return;
+    if (!targetNode || targetNode.type === 'container' || targetNode.type === 'group') return;
 
     const startPos = getPortCoordinates(targetNode, port);
     setConnecting({
@@ -703,6 +712,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
         for (const node of project.nodes) {
           if (node.id === connecting.fromNodeId) continue;
+          if (node.type === 'container' || node.type === 'group') continue; // Never snap to container/group
           const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
           for (const p of ports) {
             const pCoord = getPortCoordinates(node, p);
@@ -730,7 +740,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         let foundMagnet: MagnetType | null = null;
         let minMagDist = 32;
 
+        const currentEdge = project.edges.find((e) => e.id === draggingEdgeEndpoint.edgeId);
+        const prohibitedNodeId =
+          draggingEdgeEndpoint.endpoint === 'source' ? currentEdge?.toNodeId : currentEdge?.fromNodeId;
+
         for (const node of project.nodes) {
+          if (node.id === prohibitedNodeId) continue;
+          if (node.type === 'container' || node.type === 'group') continue; // Never snap to container/group
           const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
           for (const p of ports) {
             const pCoord = getPortCoordinates(node, p);
@@ -791,32 +807,44 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       if (resizing) {
         setResizing(null);
       }
-      if (draggingWaypoint) {
+      if (draggingWaypointRef.current) {
         setDraggingWaypoint(null);
       }
-      if (draggingEdgeEndpoint) {
-        if (magneticTarget) {
+
+      const activeEndpointDrag = draggingEdgeEndpointRef.current;
+      const activeMagnet = magneticTargetRef.current;
+
+      if (activeEndpointDrag) {
+        if (activeMagnet) {
           const updatedEdges = projectRef.current.edges.map((e) => {
-            if (e.id === draggingEdgeEndpoint.edgeId) {
-              if (draggingEdgeEndpoint.endpoint === 'source') {
-                return { ...e, fromNodeId: magneticTarget.nodeId, fromPort: magneticTarget.port };
+            if (e.id === activeEndpointDrag.edgeId) {
+              if (activeEndpointDrag.endpoint === 'source') {
+                return { ...e, fromNodeId: activeMagnet.nodeId, fromPort: activeMagnet.port };
               } else {
-                return { ...e, toNodeId: magneticTarget.nodeId, toPort: magneticTarget.port };
+                return { ...e, toNodeId: activeMagnet.nodeId, toPort: activeMagnet.port };
               }
             }
             return e;
           });
           onUpdateProject({ ...projectRef.current, edges: updatedEdges });
         } else {
-          // Check if released over a node's area
+          // Check if released over a node's area (ignoring containers and groups)
           const canvasPos = screenToCanvas(e.clientX, e.clientY);
+          const currentEdge = projectRef.current.edges.find((item) => item.id === activeEndpointDrag.edgeId);
+          const prohibitedNodeId =
+            activeEndpointDrag.endpoint === 'source' ? currentEdge?.toNodeId : currentEdge?.fromNodeId;
+
           const targetNode = projectRef.current.nodes.find(
             (node) =>
+              node.id !== prohibitedNodeId &&
+              node.type !== 'container' &&
+              node.type !== 'group' &&
               canvasPos.x >= node.x - 12 &&
               canvasPos.x <= node.x + node.width + 12 &&
               canvasPos.y >= node.y - 12 &&
               canvasPos.y <= node.y + node.height + 12
           );
+
           if (targetNode) {
             const targetPorts: PortPosition[] = ['top', 'right', 'bottom', 'left'];
             let closestPort: PortPosition = 'left';
@@ -832,8 +860,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             }
 
             const updatedEdges = projectRef.current.edges.map((edgeItem) => {
-              if (edgeItem.id === draggingEdgeEndpoint.edgeId) {
-                if (draggingEdgeEndpoint.endpoint === 'source') {
+              if (edgeItem.id === activeEndpointDrag.edgeId) {
+                if (activeEndpointDrag.endpoint === 'source') {
                   return { ...edgeItem, fromNodeId: targetNode.id, fromPort: closestPort };
                 } else {
                   return { ...edgeItem, toNodeId: targetNode.id, toPort: closestPort };
@@ -871,7 +899,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         const height = maxY - minY;
 
         if (width > 6 || height > 6) {
-          const intersecting = project.nodes.filter(
+          const intersecting = projectRef.current.nodes.filter(
             (n) => n.x < maxX && n.x + n.width > minX && n.y < maxY && n.y + n.height > minY
           );
 
@@ -892,14 +920,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       }
 
       // Finalize Port Connection with Magnetic Snap
-      if (connecting) {
-        if (magneticTarget) {
+      const activeConnecting = connectingRef.current;
+      if (activeConnecting) {
+        if (activeMagnet) {
           const newEdge: FlowEdgeType = {
             id: `edge-${Date.now()}`,
-            fromNodeId: connecting.fromNodeId,
-            toNodeId: magneticTarget.nodeId,
-            fromPort: connecting.fromPort,
-            toPort: magneticTarget.port,
+            fromNodeId: activeConnecting.fromNodeId,
+            toNodeId: activeMagnet.nodeId,
+            fromPort: activeConnecting.fromPort,
+            toPort: activeMagnet.port,
             label: '',
             lineStyle: 'solid',
             routeType: 'curved',
@@ -909,14 +938,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
           };
 
           onUpdateProject({
-            ...project,
-            edges: [...project.edges, newEdge]
+            ...projectRef.current,
+            edges: [...projectRef.current.edges, newEdge]
           });
         } else {
           const canvasPos = screenToCanvas(e.clientX, e.clientY);
-          const targetNode = project.nodes.find(
+          const targetNode = projectRef.current.nodes.find(
             (node) =>
-              node.id !== connecting.fromNodeId &&
+              node.id !== activeConnecting.fromNodeId &&
+              node.type !== 'container' &&
+              node.type !== 'group' &&
               canvasPos.x >= node.x - 16 &&
               canvasPos.x <= node.x + node.width + 16 &&
               canvasPos.y >= node.y - 16 &&
@@ -939,9 +970,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
             const newEdge: FlowEdgeType = {
               id: `edge-${Date.now()}`,
-              fromNodeId: connecting.fromNodeId,
+              fromNodeId: activeConnecting.fromNodeId,
               toNodeId: targetNode.id,
-              fromPort: connecting.fromPort,
+              fromPort: activeConnecting.fromPort,
               toPort: closestPort,
               label: '',
               lineStyle: 'solid',
@@ -952,8 +983,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             };
 
             onUpdateProject({
-              ...project,
-              edges: [...project.edges, newEdge]
+              ...projectRef.current,
+              edges: [...projectRef.current.edges, newEdge]
             });
           }
         }
@@ -964,12 +995,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     [
       resizing,
       selectionBox,
-      connecting,
-      magneticTarget,
-      project,
+      screenToCanvas,
       onSelectMultiple,
       onSelect,
-      screenToCanvas,
       onUpdateProject
     ]
   );
@@ -1535,7 +1563,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
           );
         })()}
 
-        {/* INTERACTION & SELECTION HANDLES OVERLAY LAYER (zIndex: 35 - Stacks Above Flow Nodes) */}
+        {/* INTERACTION & SELECTION HANDLES OVERLAY LAYER (zIndex: 100 - Always Stacks Above Flow Nodes & Ports) */}
         <svg
           className="drafo-canvas-handles-overlay"
           style={{
@@ -1546,7 +1574,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             height: '100%',
             overflow: 'visible',
             pointerEvents: 'none',
-            zIndex: 35
+            zIndex: 100
           }}
         >
           {/* Render Selected Edge Canva Handles */}
@@ -1565,7 +1593,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             const targetOverride =
               activeDragPos?.endpoint === 'target' ? activeDragPos.point : undefined;
 
-            const { sourcePoint, targetPoint, labelPosition } = calculateEdgePath(
+            const { sourcePoint, targetPoint, labelPosition, waypointPosition } = calculateEdgePath(
               sourceNode,
               targetNode,
               selectedEdge.fromPort,
@@ -1582,6 +1610,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 sourcePoint={sourcePoint}
                 targetPoint={targetPoint}
                 labelPosition={labelPosition}
+                waypointPosition={waypointPosition}
                 onStartDragEndpoint={handleStartDragEndpoint}
                 onStartDragWaypoint={handleStartDragWaypoint}
                 onResetWaypoint={(edgeId) => {

@@ -236,6 +236,7 @@ export interface FlowEdgeHandlesProps {
   sourcePoint: { x: number; y: number };
   targetPoint: { x: number; y: number };
   labelPosition: { x: number; y: number };
+  waypointPosition: { x: number; y: number };
   onStartDragWaypoint?: (edgeId: string, e: React.MouseEvent) => void;
   onStartDragEndpoint?: (edgeId: string, endpoint: 'source' | 'target', e: React.MouseEvent) => void;
   onResetWaypoint?: (edgeId: string) => void;
@@ -245,12 +246,12 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
   edge,
   sourcePoint,
   targetPoint,
-  labelPosition,
+  waypointPosition,
   onStartDragWaypoint,
   onStartDragEndpoint,
   onResetWaypoint
 }) => {
-  const waypointPos = edge.controlPoint ? edge.controlPoint : labelPosition;
+  const waypointPos = waypointPosition;
 
   return (
     <g className="drafo-canva-edge-controls" style={{ pointerEvents: 'auto' }}>
@@ -261,7 +262,7 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           cy={sourcePoint.y}
           r={16}
           fill="transparent"
-          style={{ cursor: 'crosshair' }}
+          style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
           onMouseDown={(e) => {
             e.stopPropagation();
             onStartDragEndpoint?.(edge.id, 'source', e);
@@ -277,6 +278,7 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           className="drafo-canva-endpoint-handle"
           style={{
             cursor: 'crosshair',
+            pointerEvents: 'auto',
             filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
           }}
           onMouseDown={(e) => {
@@ -293,7 +295,7 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           cy={targetPoint.y}
           r={16}
           fill="transparent"
-          style={{ cursor: 'crosshair' }}
+          style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
           onMouseDown={(e) => {
             e.stopPropagation();
             onStartDragEndpoint?.(edge.id, 'target', e);
@@ -309,6 +311,7 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           className="drafo-canva-endpoint-handle"
           style={{
             cursor: 'crosshair',
+            pointerEvents: 'auto',
             filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
           }}
           onMouseDown={(e) => {
@@ -318,26 +321,14 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
         />
       </g>
 
-      {/* 3. Canva Curvature & Elbow Waypoint Handle */}
+      {/* 3. Canva Curvature & Elbow Waypoint Handle (Pinned directly on line, ZERO detached lines) */}
       <g className="drafo-canva-handle-group">
-        {edge.controlPoint && (
-          <line
-            x1={labelPosition.x}
-            y1={labelPosition.y}
-            x2={waypointPos.x}
-            y2={waypointPos.y}
-            stroke="#93C5FD"
-            strokeWidth={1.5}
-            strokeDasharray="2,2"
-            pointerEvents="none"
-          />
-        )}
         <circle
           cx={waypointPos.x}
           cy={waypointPos.y}
           r={18}
           fill="transparent"
-          style={{ cursor: 'grab' }}
+          style={{ cursor: 'grab', pointerEvents: 'auto' }}
           onMouseDown={(e) => {
             e.stopPropagation();
             onStartDragWaypoint?.(edge.id, e);
@@ -350,13 +341,14 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
         <circle
           cx={waypointPos.x}
           cy={waypointPos.y}
-          r={7}
+          r={6.5}
           fill="#FFFFFF"
           stroke="#2563EB"
           strokeWidth={2.5}
           className="drafo-canva-waypoint-handle"
           style={{
             cursor: 'grab',
+            pointerEvents: 'auto',
             filter: 'drop-shadow(0 2px 8px rgba(37, 99, 235, 0.5))'
           }}
           onMouseDown={(e) => {
