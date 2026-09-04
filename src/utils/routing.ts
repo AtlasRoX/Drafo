@@ -73,7 +73,6 @@ export function getBestPortPair(
       const tn = getPortNormal(tp);
 
       const dist = Math.hypot(tpCoord.x - sp.x, tpCoord.y - sp.y);
-      // Penalize normals pointing away from the vector
       const dotSrc = fn.x * dx + fn.y * dy;
       const dotTgt = tn.x * (-dx) + tn.y * (-dy);
 
@@ -128,9 +127,10 @@ export function simplifyPoints(points: Point[]): Point[] {
 }
 
 /**
- * Converts a sequence of points to an SVG path with smooth, Canva/Figma-style rounded corners.
+ * Converts a sequence of points to an SVG path with crisp, subtle rounded corners.
+ * For elbow connectors, radius is 4-5px so right angles stay distinctly 90 degrees.
  */
-export function pointsToRoundedPath(points: Point[], radius: number = 10): string {
+export function pointsToRoundedPath(points: Point[], radius: number = 4): string {
   const pts = simplifyPoints(points);
   if (pts.length < 2) return '';
   if (pts.length === 2) {
@@ -169,6 +169,7 @@ export function pointsToRoundedPath(points: Point[], radius: number = 10): strin
 
 /**
  * Computes obstacle-aware Manhattan orthogonal polyline points between two ports.
+ * Guarantees strict 90-degree right angles with crisp corners and intuitive waypoint dragging.
  */
 function computeOrthogonalPoints(
   sourceNode: FlowNode,
@@ -181,58 +182,14 @@ function computeOrthogonalPoints(
 ): { points: Point[]; waypoint: Point } {
   const norm1 = getPortNormal(fromPort);
   const norm2 = getPortNormal(toPort);
-  const stub = 24;
+  const stub = 20;
 
   const isHExit = fromPort === 'left' || fromPort === 'right';
   const isHEntry = toPort === 'left' || toPort === 'right';
 
-  // If user explicitly dragged the waypoint handle, shift the primary intermediate corridor
-  if (controlPoint) {
-    let pts: Point[] = [];
-    let activeWp: Point = controlPoint;
+  const p1Stub = { x: p1.x + norm1.x * stub, y: p1.y + norm1.y * stub };
+  const p2Stub = { x: p2.x + norm2.x * stub, y: p2.y + norm2.y * stub };
 
-    if (isHExit && isHEntry) {
-      // Horizontal exit & entry: intermediate trunk is vertical at x = controlPoint.x
-      pts = [
-        p1,
-        { x: controlPoint.x, y: p1.y },
-        { x: controlPoint.x, y: p2.y },
-        p2
-      ];
-      activeWp = { x: controlPoint.x, y: (p1.y + p2.y) / 2 };
-    } else if (!isHExit && !isHEntry) {
-      // Vertical exit & entry: intermediate trunk is horizontal at y = controlPoint.y
-      pts = [
-        p1,
-        { x: p1.x, y: controlPoint.y },
-        { x: p2.x, y: controlPoint.y },
-        p2
-      ];
-      activeWp = { x: (p1.x + p2.x) / 2, y: controlPoint.y };
-    } else if (isHExit && !isHEntry) {
-      // Horizontal exit, vertical entry
-      pts = [
-        p1,
-        { x: controlPoint.x, y: p1.y },
-        { x: controlPoint.x, y: p2.y },
-        p2
-      ];
-      activeWp = { x: controlPoint.x, y: (p1.y + p2.y) / 2 };
-    } else {
-      // Vertical exit, horizontal entry
-      pts = [
-        p1,
-        { x: p1.x, y: controlPoint.y },
-        { x: p2.x, y: controlPoint.y },
-        p2
-      ];
-      activeWp = { x: (p1.x + p2.x) / 2, y: controlPoint.y };
-    }
-
-    return { points: simplifyPoints(pts), waypoint: activeWp };
-  }
-
-  // Node bounding boxes with safe margin
   const margin = 16;
   const srcBox = {
     minX: sourceNode.x - margin,
@@ -247,199 +204,292 @@ function computeOrthogonalPoints(
     maxY: targetNode.y + targetNode.height + margin
   };
 
-  const p1Stub = { x: p1.x + norm1.x * stub, y: p1.y + norm1.y * stub };
-  const p2Stub = { x: p2.x + norm2.x * stub, y: p2.y + norm2.y * stub };
-
   let points: Point[] = [];
+  let waypoint: Point = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
   // =========================================================================
-  // Case 1: Horizontal Exit & Horizontal Entry (Right-Left, Left-Right, etc.)
+  // Case 1: Horizontal to Horizontal (Left/Right -> Left/Right)
   // =========================================================================
   if (isHExit && isHEntry) {
+    const baseY = (p1.y + p2.y) / 2;
+
     if (fromPort === 'right' && toPort === 'left') {
-      if (p2.x >= p1.x + 2 * stub) {
-        // Direct clean 3-segment S-step
-        const midX = (p1.x + p2.x) / 2;
-        points = [p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2];
-      } else {
-        // Target is behind source: route around nodes
-        const canRouteBetween = tgtBox.minY >= srcBox.maxY || srcBox.minY >= tgtBox.maxY;
-        const midY = (p1.y + p2.y) / 2;
-        let corridorY = midY;
-
-        if (!canRouteBetween) {
-          const topCorridor = Math.min(srcBox.minY, tgtBox.minY) - 14;
-          const btmCorridor = Math.max(srcBox.maxY, tgtBox.maxY) + 14;
-          corridorY = Math.abs(midY - topCorridor) < Math.abs(midY - btmCorridor) ? topCorridor : btmCorridor;
+      if (controlPoint) {
+        // If user dragged vertically away from baseline (> 12px), create overhead/underhead bridge
+        if (Math.abs(controlPoint.y - baseY) > 12) {
+          points = [
+            p1,
+            { x: p1Stub.x, y: p1.y },
+            { x: p1Stub.x, y: controlPoint.y },
+            { x: p2Stub.x, y: controlPoint.y },
+            { x: p2Stub.x, y: p2.y },
+            p2
+          ];
+          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: controlPoint.y };
+        } else {
+          // User shifted the vertical step horizontally
+          const minX = p1Stub.x;
+          const maxX = p2Stub.x;
+          const stepX = minX < maxX
+            ? Math.max(minX, Math.min(controlPoint.x, maxX))
+            : controlPoint.x;
+          points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
+          waypoint = { x: stepX, y: baseY };
         }
-
-        points = [
-          p1,
-          { x: p1Stub.x, y: p1.y },
-          { x: p1Stub.x, y: corridorY },
-          { x: p2Stub.x, y: corridorY },
-          { x: p2Stub.x, y: p2.y },
-          p2
-        ];
+      } else {
+        // Natural
+        if (p2.x >= p1.x + 2 * stub) {
+          // Clean 3-segment S-step
+          const midX = (p1.x + p2.x) / 2;
+          points = [p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2];
+          waypoint = { x: midX, y: baseY };
+        } else {
+          // Target is behind source: route around nodes
+          const canRouteBetween = tgtBox.minY >= srcBox.maxY || srcBox.minY >= tgtBox.maxY;
+          let corridorY = baseY;
+          if (!canRouteBetween) {
+            const topCorridor = Math.min(srcBox.minY, tgtBox.minY) - 14;
+            const btmCorridor = Math.max(srcBox.maxY, tgtBox.maxY) + 14;
+            corridorY = Math.abs(baseY - topCorridor) < Math.abs(baseY - btmCorridor) ? topCorridor : btmCorridor;
+          }
+          points = [
+            p1,
+            { x: p1Stub.x, y: p1.y },
+            { x: p1Stub.x, y: corridorY },
+            { x: p2Stub.x, y: corridorY },
+            { x: p2Stub.x, y: p2.y },
+            p2
+          ];
+          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: corridorY };
+        }
       }
     } else if (fromPort === 'left' && toPort === 'right') {
-      if (p2.x <= p1.x - 2 * stub) {
-        const midX = (p1.x + p2.x) / 2;
-        points = [p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2];
-      } else {
-        const canRouteBetween = tgtBox.minY >= srcBox.maxY || srcBox.minY >= tgtBox.maxY;
-        const midY = (p1.y + p2.y) / 2;
-        let corridorY = midY;
-
-        if (!canRouteBetween) {
-          const topCorridor = Math.min(srcBox.minY, tgtBox.minY) - 14;
-          const btmCorridor = Math.max(srcBox.maxY, tgtBox.maxY) + 14;
-          corridorY = Math.abs(midY - topCorridor) < Math.abs(midY - btmCorridor) ? topCorridor : btmCorridor;
+      if (controlPoint) {
+        if (Math.abs(controlPoint.y - baseY) > 12) {
+          points = [
+            p1,
+            { x: p1Stub.x, y: p1.y },
+            { x: p1Stub.x, y: controlPoint.y },
+            { x: p2Stub.x, y: controlPoint.y },
+            { x: p2Stub.x, y: p2.y },
+            p2
+          ];
+          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: controlPoint.y };
+        } else {
+          const minX = p2Stub.x;
+          const maxX = p1Stub.x;
+          const stepX = minX < maxX
+            ? Math.max(minX, Math.min(controlPoint.x, maxX))
+            : controlPoint.x;
+          points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
+          waypoint = { x: stepX, y: baseY };
         }
-
-        points = [
-          p1,
-          { x: p1Stub.x, y: p1.y },
-          { x: p1Stub.x, y: corridorY },
-          { x: p2Stub.x, y: corridorY },
-          { x: p2Stub.x, y: p2.y },
-          p2
-        ];
+      } else {
+        if (p2.x <= p1.x - 2 * stub) {
+          const midX = (p1.x + p2.x) / 2;
+          points = [p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2];
+          waypoint = { x: midX, y: baseY };
+        } else {
+          const canRouteBetween = tgtBox.minY >= srcBox.maxY || srcBox.minY >= tgtBox.maxY;
+          let corridorY = baseY;
+          if (!canRouteBetween) {
+            const topCorridor = Math.min(srcBox.minY, tgtBox.minY) - 14;
+            const btmCorridor = Math.max(srcBox.maxY, tgtBox.maxY) + 14;
+            corridorY = Math.abs(baseY - topCorridor) < Math.abs(baseY - btmCorridor) ? topCorridor : btmCorridor;
+          }
+          points = [
+            p1,
+            { x: p1Stub.x, y: p1.y },
+            { x: p1Stub.x, y: corridorY },
+            { x: p2Stub.x, y: corridorY },
+            { x: p2Stub.x, y: p2.y },
+            p2
+          ];
+          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: corridorY };
+        }
       }
     } else if (fromPort === 'right' && toPort === 'right') {
-      const maxX = Math.max(srcBox.maxX, tgtBox.maxX) + 14;
-      points = [p1, { x: maxX, y: p1.y }, { x: maxX, y: p2.y }, p2];
+      const stepX = controlPoint
+        ? Math.max(controlPoint.x, Math.max(p1.x, p2.x) + stub)
+        : Math.max(srcBox.maxX, tgtBox.maxX) + 14;
+      points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
+      waypoint = { x: stepX, y: baseY };
     } else {
       // left to left
-      const minX = Math.min(srcBox.minX, tgtBox.minX) - 14;
-      points = [p1, { x: minX, y: p1.y }, { x: minX, y: p2.y }, p2];
+      const stepX = controlPoint
+        ? Math.min(controlPoint.x, Math.min(p1.x, p2.x) - stub)
+        : Math.min(srcBox.minX, tgtBox.minX) - 14;
+      points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
+      waypoint = { x: stepX, y: baseY };
     }
   }
   // =========================================================================
-  // Case 2: Vertical Exit & Vertical Entry (Bottom-Top, Top-Bottom, etc.)
+  // Case 2: Vertical to Vertical (Top/Bottom -> Top/Bottom)
   // =========================================================================
   else if (!isHExit && !isHEntry) {
+    const baseX = (p1.x + p2.x) / 2;
+
     if (fromPort === 'bottom' && toPort === 'top') {
-      if (p2.y >= p1.y + 2 * stub) {
-        const midY = (p1.y + p2.y) / 2;
-        points = [p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2];
-      } else {
-        const canRouteBetween = tgtBox.minX >= srcBox.maxX || srcBox.minX >= tgtBox.maxX;
-        const midX = (p1.x + p2.x) / 2;
-        let corridorX = midX;
-
-        if (!canRouteBetween) {
-          const leftCorridor = Math.min(srcBox.minX, tgtBox.minX) - 14;
-          const rightCorridor = Math.max(srcBox.maxX, tgtBox.maxX) + 14;
-          corridorX = Math.abs(midX - leftCorridor) < Math.abs(midX - rightCorridor) ? leftCorridor : rightCorridor;
+      if (controlPoint) {
+        if (Math.abs(controlPoint.x - baseX) > 12) {
+          // Side bridge at controlPoint.x
+          points = [
+            p1,
+            { x: p1.x, y: p1Stub.y },
+            { x: controlPoint.x, y: p1Stub.y },
+            { x: controlPoint.x, y: p2Stub.y },
+            { x: p2.x, y: p2Stub.y },
+            p2
+          ];
+          waypoint = { x: controlPoint.x, y: (p1Stub.y + p2Stub.y) / 2 };
+        } else {
+          // Shift horizontal step vertically
+          const minY = p1Stub.y;
+          const maxY = p2Stub.y;
+          const stepY = minY < maxY
+            ? Math.max(minY, Math.min(controlPoint.y, maxY))
+            : controlPoint.y;
+          points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
+          waypoint = { x: baseX, y: stepY };
         }
-
-        points = [
-          p1,
-          { x: p1.x, y: p1Stub.y },
-          { x: corridorX, y: p1Stub.y },
-          { x: corridorX, y: p2Stub.y },
-          { x: p2.x, y: p2Stub.y },
-          p2
-        ];
+      } else {
+        if (p2.y >= p1.y + 2 * stub) {
+          const midY = (p1.y + p2.y) / 2;
+          points = [p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2];
+          waypoint = { x: baseX, y: midY };
+        } else {
+          const canRouteBetween = tgtBox.minX >= srcBox.maxX || srcBox.minX >= tgtBox.maxX;
+          let corridorX = baseX;
+          if (!canRouteBetween) {
+            const leftCorridor = Math.min(srcBox.minX, tgtBox.minX) - 14;
+            const rightCorridor = Math.max(srcBox.maxX, tgtBox.maxX) + 14;
+            corridorX = Math.abs(baseX - leftCorridor) < Math.abs(baseX - rightCorridor) ? leftCorridor : rightCorridor;
+          }
+          points = [
+            p1,
+            { x: p1.x, y: p1Stub.y },
+            { x: corridorX, y: p1Stub.y },
+            { x: corridorX, y: p2Stub.y },
+            { x: p2.x, y: p2Stub.y },
+            p2
+          ];
+          waypoint = { x: corridorX, y: (p1Stub.y + p2Stub.y) / 2 };
+        }
       }
     } else if (fromPort === 'top' && toPort === 'bottom') {
-      if (p2.y <= p1.y - 2 * stub) {
-        const midY = (p1.y + p2.y) / 2;
-        points = [p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2];
-      } else {
-        const canRouteBetween = tgtBox.minX >= srcBox.maxX || srcBox.minX >= tgtBox.maxX;
-        const midX = (p1.x + p2.x) / 2;
-        let corridorX = midX;
-
-        if (!canRouteBetween) {
-          const leftCorridor = Math.min(srcBox.minX, tgtBox.minX) - 14;
-          const rightCorridor = Math.max(srcBox.maxX, tgtBox.maxX) + 14;
-          corridorX = Math.abs(midX - leftCorridor) < Math.abs(midX - rightCorridor) ? leftCorridor : rightCorridor;
+      if (controlPoint) {
+        if (Math.abs(controlPoint.x - baseX) > 12) {
+          points = [
+            p1,
+            { x: p1.x, y: p1Stub.y },
+            { x: controlPoint.x, y: p1Stub.y },
+            { x: controlPoint.x, y: p2Stub.y },
+            { x: p2.x, y: p2Stub.y },
+            p2
+          ];
+          waypoint = { x: controlPoint.x, y: (p1Stub.y + p2Stub.y) / 2 };
+        } else {
+          const minY = p2Stub.y;
+          const maxY = p1Stub.y;
+          const stepY = minY < maxY
+            ? Math.max(minY, Math.min(controlPoint.y, maxY))
+            : controlPoint.y;
+          points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
+          waypoint = { x: baseX, y: stepY };
         }
-
-        points = [
-          p1,
-          { x: p1.x, y: p1Stub.y },
-          { x: corridorX, y: p1Stub.y },
-          { x: corridorX, y: p2Stub.y },
-          { x: p2.x, y: p2Stub.y },
-          p2
-        ];
+      } else {
+        if (p2.y <= p1.y - 2 * stub) {
+          const midY = (p1.y + p2.y) / 2;
+          points = [p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2];
+          waypoint = { x: baseX, y: midY };
+        } else {
+          const canRouteBetween = tgtBox.minX >= srcBox.maxX || srcBox.minX >= tgtBox.maxX;
+          let corridorX = baseX;
+          if (!canRouteBetween) {
+            const leftCorridor = Math.min(srcBox.minX, tgtBox.minX) - 14;
+            const rightCorridor = Math.max(srcBox.maxX, tgtBox.maxX) + 14;
+            corridorX = Math.abs(baseX - leftCorridor) < Math.abs(baseX - rightCorridor) ? leftCorridor : rightCorridor;
+          }
+          points = [
+            p1,
+            { x: p1.x, y: p1Stub.y },
+            { x: corridorX, y: p1Stub.y },
+            { x: corridorX, y: p2Stub.y },
+            { x: p2.x, y: p2Stub.y },
+            p2
+          ];
+          waypoint = { x: corridorX, y: (p1Stub.y + p2Stub.y) / 2 };
+        }
       }
     } else if (fromPort === 'bottom' && toPort === 'bottom') {
-      const maxY = Math.max(srcBox.maxY, tgtBox.maxY) + 14;
-      points = [p1, { x: p1.x, y: maxY }, { x: p2.x, y: maxY }, p2];
+      const stepY = controlPoint
+        ? Math.max(controlPoint.y, Math.max(p1.y, p2.y) + stub)
+        : Math.max(srcBox.maxY, tgtBox.maxY) + 14;
+      points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
+      waypoint = { x: baseX, y: stepY };
     } else {
       // top to top
-      const minY = Math.min(srcBox.minY, tgtBox.minY) - 14;
-      points = [p1, { x: p1.x, y: minY }, { x: p2.x, y: minY }, p2];
+      const stepY = controlPoint
+        ? Math.min(controlPoint.y, Math.min(p1.y, p2.y) - stub)
+        : Math.min(srcBox.minY, tgtBox.minY) - 14;
+      points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
+      waypoint = { x: baseX, y: stepY };
     }
   }
   // =========================================================================
-  // Case 3: Horizontal Exit & Vertical Entry (Right-Top, Right-Bottom, etc.)
+  // Case 3: Horizontal Exit & Vertical Entry (Right/Left -> Top/Bottom)
   // =========================================================================
   else if (isHExit && !isHEntry) {
-    const isExitRight = fromPort === 'right';
-    const isEntryBottom = toPort === 'bottom';
-
-    const xDiff = (p2.x - p1.x) * (isExitRight ? 1 : -1);
-    const yDiff = (p2.y - p1.y) * (isEntryBottom ? -1 : 1);
-
-    if (xDiff >= stub && yDiff >= stub) {
-      // Clean single L-turn: p1 -> (p2.x, p1.y) -> p2
-      points = [p1, { x: p2.x, y: p1.y }, p2];
+    if (controlPoint) {
+      points = [p1, { x: controlPoint.x, y: p1.y }, { x: controlPoint.x, y: p2.y }, p2];
+      waypoint = { x: controlPoint.x, y: (p1.y + p2.y) / 2 };
     } else {
-      // Step around
-      const stepX = p1Stub.x;
-      const stepY = p2Stub.y;
-      points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: stepY }, { x: p2.x, y: stepY }, p2];
+      const isExitRight = fromPort === 'right';
+      const isEntryBottom = toPort === 'bottom';
+
+      const xDiff = (p2.x - p1.x) * (isExitRight ? 1 : -1);
+      const yDiff = (p2.y - p1.y) * (isEntryBottom ? -1 : 1);
+
+      if (xDiff >= stub && yDiff >= stub) {
+        // Clean single L-turn
+        points = [p1, { x: p2.x, y: p1.y }, p2];
+        waypoint = { x: p2.x, y: p1.y };
+      } else {
+        const stepX = p1Stub.x;
+        const stepY = p2Stub.y;
+        points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: stepY }, { x: p2.x, y: stepY }, p2];
+        waypoint = { x: stepX, y: stepY };
+      }
     }
   }
   // =========================================================================
-  // Case 4: Vertical Exit & Horizontal Entry (Top-Right, Bottom-Left, etc.)
+  // Case 4: Vertical Exit & Horizontal Entry (Top/Bottom -> Right/Left)
   // =========================================================================
   else {
-    const isExitBottom = fromPort === 'bottom';
-    const isEntryRight = toPort === 'right';
-
-    const yDiff = (p2.y - p1.y) * (isExitBottom ? 1 : -1);
-    const xDiff = (p2.x - p1.x) * (isEntryRight ? -1 : 1);
-
-    if (yDiff >= stub && xDiff >= stub) {
-      // Clean single L-turn: p1 -> (p1.x, p2.y) -> p2
-      points = [p1, { x: p1.x, y: p2.y }, p2];
+    if (controlPoint) {
+      points = [p1, { x: p1.x, y: controlPoint.y }, { x: p2.x, y: controlPoint.y }, p2];
+      waypoint = { x: (p1.x + p2.x) / 2, y: controlPoint.y };
     } else {
-      // Step around
-      const stepY = p1Stub.y;
-      const stepX = p2Stub.x;
-      points = [p1, { x: p1.x, y: stepY }, { x: stepX, y: stepY }, { x: stepX, y: p2.y }, p2];
+      const isExitBottom = fromPort === 'bottom';
+      const isEntryRight = toPort === 'right';
+
+      const yDiff = (p2.y - p1.y) * (isExitBottom ? 1 : -1);
+      const xDiff = (p2.x - p1.x) * (isEntryRight ? -1 : 1);
+
+      if (yDiff >= stub && xDiff >= stub) {
+        // Clean single L-turn
+        points = [p1, { x: p1.x, y: p2.y }, p2];
+        waypoint = { x: p1.x, y: p2.y };
+      } else {
+        const stepY = p1Stub.y;
+        const stepX = p2Stub.x;
+        points = [p1, { x: p1.x, y: stepY }, { x: stepX, y: stepY }, { x: stepX, y: p2.y }, p2];
+        waypoint = { x: stepX, y: stepY };
+      }
     }
   }
 
   const cleanPoints = simplifyPoints(points);
-
-  // Compute optimal waypoint handle position on primary intermediate segment
-  let waypoint: Point = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-  if (cleanPoints.length >= 3) {
-    let maxLen = 0;
-    let bestIdx = 0;
-    for (let i = 0; i < cleanPoints.length - 1; i++) {
-      const len = Math.hypot(
-        cleanPoints[i + 1].x - cleanPoints[i].x,
-        cleanPoints[i + 1].y - cleanPoints[i].y
-      );
-      if (len > maxLen) {
-        maxLen = len;
-        bestIdx = i;
-      }
-    }
-    waypoint = {
-      x: (cleanPoints[bestIdx].x + cleanPoints[bestIdx + 1].x) / 2,
-      y: (cleanPoints[bestIdx].y + cleanPoints[bestIdx + 1].y) / 2
-    };
-  }
-
   return { points: cleanPoints, waypoint };
 }
 
@@ -484,8 +534,7 @@ export function calculateEdgePath(
   // CURVED ROUTE (Figma / Canva Grade Cubic Bézier with Exact Waypoint Tracking)
   // =========================================================================
   if (routeType === 'curved') {
-    // If the user dragged the waypoint handle, construct a quadratic curve that
-    // passes EXACTLY through controlPoint at parameter t = 0.5:
+    // Exact quadratic Bézier through controlPoint at t = 0.5:
     // B(0.5) = 0.25*P1 + 0.5*C + 0.25*P2 = W  =>  C = 2*W - 0.5*(P1 + P2)
     if (controlPoint) {
       const cx = 2 * controlPoint.x - 0.5 * (p1.x + p2.x);
@@ -508,7 +557,6 @@ export function calculateEdgePath(
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
 
-    // Adaptive tangent offset based on distance and facing direction
     const isOppositeH = (fromPort === 'right' && toPort === 'left') || (fromPort === 'left' && toPort === 'right');
     const isOppositeV = (fromPort === 'bottom' && toPort === 'top') || (fromPort === 'top' && toPort === 'bottom');
 
@@ -549,7 +597,7 @@ export function calculateEdgePath(
   }
 
   // =========================================================================
-  // ORTHOGONAL (Manhattan Smart Step with obstacle avoidance & rounded corners)
+  // ORTHOGONAL (Manhattan Smart Step with obstacle avoidance & crisp right angles)
   // =========================================================================
   const { points, waypoint } = computeOrthogonalPoints(
     sourceNode,
@@ -561,7 +609,8 @@ export function calculateEdgePath(
     controlPoint
   );
 
-  const path = pointsToRoundedPath(points, 12);
+  // Crisp radius 4px ensures clean, distinct right-angle corners without diagonal slants
+  const path = pointsToRoundedPath(points, 4);
   return {
     path,
     labelPosition: { x: waypoint.x, y: waypoint.y - 14 },

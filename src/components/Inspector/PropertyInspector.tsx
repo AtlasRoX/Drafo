@@ -1205,7 +1205,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             <div className="canva-type-selector">
               <button
                 className={`canva-type-btn ${selectedEdge.routeType === 'straight' ? 'active' : ''}`}
-                onClick={() => updateEdgeProps({ routeType: 'straight' })}
+                onClick={() => updateEdgeProps({ routeType: 'straight', controlPoint: undefined })}
                 title="Straight direct line"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -1215,7 +1215,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               </button>
               <button
                 className={`canva-type-btn ${selectedEdge.routeType === 'orthogonal' ? 'active' : ''}`}
-                onClick={() => updateEdgeProps({ routeType: 'orthogonal' })}
+                onClick={() => updateEdgeProps({ routeType: 'orthogonal', controlPoint: undefined })}
                 title="Elbow right-angle connector"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -1225,7 +1225,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               </button>
               <button
                 className={`canva-type-btn ${(selectedEdge.routeType || 'curved') === 'curved' ? 'active' : ''}`}
-                onClick={() => updateEdgeProps({ routeType: 'curved' })}
+                onClick={() => updateEdgeProps({ routeType: 'curved', controlPoint: undefined })}
                 title="Smooth curved connector"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
