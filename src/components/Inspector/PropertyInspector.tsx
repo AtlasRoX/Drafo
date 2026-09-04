@@ -1188,35 +1188,171 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             />
           </div>
 
-          {/* Connection Endpoints & Direction */}
+          {/* 1. Line Type (Canva: Straight, Elbow, Curved) */}
           <div className="drafo-form-field">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label className="drafo-field-label" style={{ marginBottom: 0 }}>Connection Endpoints</label>
+              <label className="drafo-field-label" style={{ marginBottom: 0 }}>Line Type</label>
+              {selectedEdge.controlPoint && (
+                <button
+                  className="canva-reset-btn"
+                  onClick={() => updateEdgeProps({ controlPoint: undefined })}
+                  title="Reset curve back to automatic path"
+                >
+                  <RotateCcw size={11} /> Reset curve
+                </button>
+              )}
+            </div>
+            <div className="canva-type-selector">
               <button
-                className="drafo-btn-secondary"
-                style={{
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  height: 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
+                className={`canva-type-btn ${selectedEdge.routeType === 'straight' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ routeType: 'straight' })}
+                title="Straight direct line"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
+                <span>Straight</span>
+              </button>
+              <button
+                className={`canva-type-btn ${selectedEdge.routeType === 'orthogonal' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ routeType: 'orthogonal' })}
+                title="Elbow right-angle connector"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 20 L4 8 Q4 4 8 4 L20 4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
+                <span>Elbow</span>
+              </button>
+              <button
+                className={`canva-type-btn ${(selectedEdge.routeType || 'curved') === 'curved' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ routeType: 'curved' })}
+                title="Smooth curved connector"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 18 C10 18 12 6 20 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
+                <span>Curved</span>
+              </button>
+            </div>
+            <div className="canva-tip-banner">
+              💡 <strong>Canva Touch:</strong> Drag the blue dots at the ends to snap to any node port, or drag the middle dot to bend the curve.
+            </div>
+          </div>
+
+          {/* 2. Line Weight & Style (Canva Slider & Dash previews) */}
+          <div className="drafo-form-field">
+            <div className="canva-weight-header">
+              <label className="drafo-field-label" style={{ marginBottom: 0 }}>Line Weight</label>
+              <span className="canva-weight-badge">{selectedEdge.width || 1.5} px</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="8"
+              step="0.5"
+              className="drafo-slider"
+              value={selectedEdge.width || 1.5}
+              onChange={(e) => updateEdgeProps({ width: Number(e.target.value) })}
+            />
+          </div>
+
+          {/* 3. Line Pattern / Dash Style */}
+          <div className="drafo-form-field">
+            <label className="drafo-field-label">Line Style</label>
+            <div className="canva-style-selector">
+              <button
+                className={`canva-style-btn ${selectedEdge.lineStyle === 'solid' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ lineStyle: 'solid' })}
+                title="Solid line"
+              >
+                <svg width="100%" height="16" viewBox="0 0 60 16">
+                  <line x1="4" y1="8" x2="56" y2="8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                className={`canva-style-btn ${selectedEdge.lineStyle === 'dashed' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ lineStyle: 'dashed' })}
+                title="Dashed line"
+              >
+                <svg width="100%" height="16" viewBox="0 0 60 16">
+                  <line x1="4" y1="8" x2="56" y2="8" stroke="currentColor" strokeWidth="2.5" strokeDasharray="6,4" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                className={`canva-style-btn ${selectedEdge.lineStyle === 'dotted' ? 'active' : ''}`}
+                onClick={() => updateEdgeProps({ lineStyle: 'dotted' })}
+                title="Dotted line"
+              >
+                <svg width="100%" height="16" viewBox="0 0 60 16">
+                  <line x1="4" y1="8" x2="56" y2="8" stroke="currentColor" strokeWidth="2.5" strokeDasharray="2,4" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Line Start & End Markers with Swap Button */}
+          <div className="drafo-form-field">
+            <label className="drafo-field-label">Line Start & End</label>
+            <div className="canva-markers-row">
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 3, fontWeight: 600 }}>Start Tip</div>
+                <select
+                  className="drafo-input"
+                  style={{ height: 32, fontSize: 11, padding: '2px 8px' }}
+                  value={selectedEdge.arrowheadStart || (selectedEdge.bidirectional ? selectedEdge.arrowhead : 'none')}
+                  onChange={(e) => {
+                    const val = e.target.value as ArrowheadType;
+                    updateEdgeProps({
+                      arrowheadStart: val,
+                      bidirectional: val !== 'none' && val === (selectedEdge.arrowhead || 'arrow')
+                    });
+                  }}
+                >
+                  <option value="none">None (—)</option>
+                  <option value="arrow">Filled Arrow (◀)</option>
+                  <option value="open">Open Arrow (&lt;)</option>
+                  <option value="circle">Circle Dot (●)</option>
+                </select>
+              </div>
+
+              <button
+                className="canva-swap-btn"
+                title="Swap line ends and direction"
                 onClick={() => {
                   updateEdgeProps({
                     fromNodeId: selectedEdge.toNodeId,
                     toNodeId: selectedEdge.fromNodeId,
                     fromPort: selectedEdge.toPort,
-                    toPort: selectedEdge.fromPort
+                    toPort: selectedEdge.fromPort,
+                    arrowhead: selectedEdge.arrowheadStart || 'none',
+                    arrowheadStart: selectedEdge.arrowhead || 'arrow'
                   });
                 }}
-                title="Swap source and target nodes & ports"
               >
-                <ArrowLeftRight size={11} /> Reverse
+                <ArrowLeftRight size={14} />
               </button>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 3, fontWeight: 600 }}>End Tip</div>
+                <select
+                  className="drafo-input"
+                  style={{ height: 32, fontSize: 11, padding: '2px 8px' }}
+                  value={selectedEdge.arrowhead || 'arrow'}
+                  onChange={(e) => updateEdgeProps({ arrowhead: e.target.value as ArrowheadType })}
+                >
+                  <option value="none">None (—)</option>
+                  <option value="arrow">Filled Arrow (▶)</option>
+                  <option value="open">Open Arrow (&gt;)</option>
+                  <option value="circle">Circle Dot (●)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Anchor Ports */}
+          <div className="drafo-form-field">
+            <label className="drafo-field-label">Anchor Ports</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   From: {edgeSourceNode?.title || 'Source'}
@@ -1257,141 +1393,9 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             </div>
           </div>
 
-          {/* Edge Route Type & Draggable Waypoint */}
+          {/* 6. Line Color */}
           <div className="drafo-form-field">
-            <label className="drafo-field-label">Routing Geometry</label>
-            <div className="drafo-segmented-control">
-              {(['curved', 'orthogonal', 'straight'] as RouteType[]).map((r) => (
-                <button
-                  key={r}
-                  className={`drafo-segment-btn ${selectedEdge.routeType === r ? 'active' : ''}`}
-                  onClick={() => updateEdgeProps({ routeType: r })}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-
-            {/* Draggable Waypoint Status & Control */}
-            {selectedEdge.controlPoint ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: 8,
-                  padding: '6px 10px',
-                  background: 'var(--drafo-bg-subtle, #F1F5F9)',
-                  border: '1px solid var(--drafo-border, #CBD5E1)',
-                  borderRadius: 6,
-                  fontSize: 11
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#2563EB', fontWeight: 600 }}>
-                  <Move size={12} />
-                  <span>Waypoint ({Math.round(selectedEdge.controlPoint.x)}, {Math.round(selectedEdge.controlPoint.y)})</span>
-                </span>
-                <button
-                  className="drafo-btn-secondary"
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    height: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}
-                  onClick={() => updateEdgeProps({ controlPoint: undefined })}
-                  title="Reset connector to automatic routing path"
-                >
-                  <RotateCcw size={11} /> Auto Path
-                </button>
-              </div>
-            ) : (
-              <div
-                style={{
-                  marginTop: 6,
-                  padding: '6px 8px',
-                  background: 'rgba(37, 99, 235, 0.05)',
-                  border: '1px dashed rgba(37, 99, 235, 0.3)',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  color: 'var(--drafo-text-secondary, #64748B)',
-                  lineHeight: 1.35
-                }}
-              >
-                💡 <strong>Avoid Overlaps:</strong> Drag the blue diamond handle on the connector in canvas to freely bend or route around obstacles.
-              </div>
-            )}
-          </div>
-
-          {/* Edge Line Style */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">Line Style</label>
-            <div className="drafo-segmented-control">
-              {(['solid', 'dashed', 'dotted'] as LineStyle[]).map((s) => (
-                <button
-                  key={s}
-                  className={`drafo-segment-btn ${selectedEdge.lineStyle === s ? 'active' : ''}`}
-                  onClick={() => updateEdgeProps({ lineStyle: s })}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Arrowhead Tip Style */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">Arrowhead Tip</label>
-            <div className="drafo-segmented-control">
-              {(['arrow', 'open', 'circle', 'none'] as ArrowheadType[]).map((a) => (
-                <button
-                  key={a}
-                  className={`drafo-segment-btn ${(selectedEdge.arrowhead || 'arrow') === a ? 'active' : ''}`}
-                  onClick={() => updateEdgeProps({ arrowhead: a })}
-                >
-                  {a}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Edge Flow & Bidirectional Toggles */}
-          <div className="drafo-form-field" style={{ display: 'flex', gap: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={selectedEdge.bidirectional || false}
-                onChange={(e) => updateEdgeProps({ bidirectional: e.target.checked })}
-              />
-              <span>Bidirectional</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={selectedEdge.isAnimated || false}
-                onChange={(e) => updateEdgeProps({ isAnimated: e.target.checked })}
-              />
-              <span>Animated Flow</span>
-            </label>
-          </div>
-
-          {/* Latency / SLA */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">Latency / Response Time (optional)</label>
-            <input
-              type="text"
-              className="drafo-input"
-              value={selectedEdge.latency || ''}
-              onChange={(e) => updateEdgeProps({ latency: e.target.value })}
-              placeholder="e.g. 15ms or 120ms"
-            />
-          </div>
-
-          {/* Edge Color */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">Connector Color</label>
+            <label className="drafo-field-label">Line Color</label>
             <div className="drafo-color-presets-grid">
               {['#000000', '#2563EB', '#16A34A', '#D97706', '#9333EA', '#DC2626', '#64748B'].map(
                 (color) => (
@@ -1431,17 +1435,26 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             </div>
           </div>
 
-          {/* Line Width */}
+          {/* 7. Flow Animation & Latency SLA */}
+          <div className="drafo-form-field" style={{ display: 'flex', gap: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedEdge.isAnimated || false}
+                onChange={(e) => updateEdgeProps({ isAnimated: e.target.checked })}
+              />
+              <span>Animated Flow Pulse</span>
+            </label>
+          </div>
+
           <div className="drafo-form-field">
-            <label className="drafo-field-label">Stroke Thickness ({selectedEdge.width}px)</label>
+            <label className="drafo-field-label">Latency / Response Time (optional)</label>
             <input
-              type="range"
-              min="1"
-              max="5"
-              step="0.5"
-              className="drafo-slider"
-              value={selectedEdge.width}
-              onChange={(e) => updateEdgeProps({ width: Number(e.target.value) })}
+              type="text"
+              className="drafo-input"
+              value={selectedEdge.latency || ''}
+              onChange={(e) => updateEdgeProps({ latency: e.target.value })}
+              placeholder="e.g. 15ms or 120ms"
             />
           </div>
         </div>

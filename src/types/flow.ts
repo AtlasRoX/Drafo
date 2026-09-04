@@ -104,6 +104,7 @@ export interface FlowEdge {
   color: string;
   width: number;
   arrowhead: ArrowheadType;
+  arrowheadStart?: ArrowheadType;
   bidirectional?: boolean;
   isAnimated?: boolean;
   latency?: string;

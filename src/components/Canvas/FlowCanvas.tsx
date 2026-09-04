@@ -169,6 +169,12 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     startY: number;
   } | null>(null);
 
+  // State for Canva-style dragging edge endpoints (reconnect start or end)
+  const [draggingEdgeEndpoint, setDraggingEdgeEndpoint] = useState<{
+    edgeId: string;
+    endpoint: 'source' | 'target';
+  } | null>(null);
+
   // State for Smart Magnetic Alignment Guides
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
 
@@ -710,6 +716,47 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         const activePt = foundMagnet ? { x: foundMagnet.x, y: foundMagnet.y } : canvasPos;
         setConnecting((prev) => (prev ? { ...prev, currentPoint: activePt } : null));
       }
+
+      // Canva-Style Endpoint Dragging (reconnecting source or target with magnetic snap)
+      if (draggingEdgeEndpoint) {
+        type MagnetType = { nodeId: string; port: PortPosition; x: number; y: number };
+        let foundMagnet: MagnetType | null = null;
+        let minMagDist = 32;
+
+        for (const node of project.nodes) {
+          const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
+          for (const p of ports) {
+            const pCoord = getPortCoordinates(node, p);
+            const dist = Math.hypot(canvasPos.x - pCoord.x, canvasPos.y - pCoord.y);
+            if (dist < minMagDist) {
+              minMagDist = dist;
+              foundMagnet = {
+                nodeId: node.id,
+                port: p,
+                x: pCoord.x,
+                y: pCoord.y
+              };
+            }
+          }
+        }
+
+        setMagneticTarget(foundMagnet);
+
+        if (foundMagnet) {
+          const updatedEdges = project.edges.map((e) => {
+            if (e.id === draggingEdgeEndpoint.edgeId) {
+              if (draggingEdgeEndpoint.endpoint === 'source') {
+                return { ...e, fromNodeId: foundMagnet.nodeId, fromPort: foundMagnet.port };
+              } else {
+                return { ...e, toNodeId: foundMagnet.nodeId, toPort: foundMagnet.port };
+              }
+            }
+            return e;
+          });
+          const liveUpdate = onUpdateProjectLive || onUpdateProject;
+          liveUpdate({ ...project, edges: updatedEdges });
+        }
+      }
     },
     [
       isPanning,
@@ -726,7 +773,10 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       dragOffset,
       project,
       onUpdateProject,
-      connecting
+      onUpdateProjectLive,
+      connecting,
+      draggingWaypoint,
+      draggingEdgeEndpoint
     ]
   );
 
@@ -744,6 +794,10 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       }
       if (draggingWaypoint) {
         setDraggingWaypoint(null);
+      }
+      if (draggingEdgeEndpoint) {
+        setDraggingEdgeEndpoint(null);
+        setMagneticTarget(null);
       }
 
       // Commit dragged or resized project state to undo/redo history once on mouse release
@@ -957,6 +1011,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       });
     },
     [project, screenToCanvas]
+  );
+
+  const handleStartDragEndpoint = useCallback(
+    (edgeId: string, endpoint: 'source' | 'target', e: React.MouseEvent) => {
+      e.stopPropagation();
+      dragSnapshotRef.current = project;
+      setDraggingEdgeEndpoint({ edgeId, endpoint });
+    },
+    [project]
   );
 
   const handleUpdateSection = (updatedSection: FlowSection) => {
@@ -1193,6 +1256,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 }}
                 onUpdate={handleUpdateEdge}
                 onStartDragWaypoint={handleStartDragWaypoint}
+                onStartDragEndpoint={handleStartDragEndpoint}
                 onDelete={(edgeId) => {
                   onUpdateProject({
                     ...project,
@@ -1202,6 +1266,24 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
               />
             );
           })}
+
+          {/* Canva-Style Endpoint Drag Magnetic Suction Marker */}
+          {draggingEdgeEndpoint && magneticTarget && (
+            <g className="drafo-port-suction-group" pointerEvents="none">
+              <circle
+                cx={magneticTarget.x}
+                cy={magneticTarget.y}
+                r={16}
+                className="drafo-port-suction-outer"
+              />
+              <circle
+                cx={magneticTarget.x}
+                cy={magneticTarget.y}
+                r={6}
+                className="drafo-port-suction-inner"
+              />
+            </g>
+          )}
 
           {/* Render Active Connecting Line & Magnetic Target */}
           {connecting && (

@@ -27,6 +27,47 @@ export function getPortCoordinates(node: FlowNode, port: PortPosition): Point {
   }
 }
 
+/**
+ * Generate an SVG path with smooth, Canva-style rounded corners for orthogonal polylines.
+ */
+export function pointsToRoundedPath(points: Point[], radius: number = 10): string {
+  if (points.length < 2) return '';
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    const dPrevX = prev.x - curr.x;
+    const dPrevY = prev.y - curr.y;
+    const lenPrev = Math.hypot(dPrevX, dPrevY);
+
+    const dNextX = next.x - curr.x;
+    const dNextY = next.y - curr.y;
+    const lenNext = Math.hypot(dNextX, dNextY);
+
+    if (lenPrev === 0 || lenNext === 0) continue;
+
+    const r = Math.min(radius, lenPrev / 2, lenNext / 2);
+
+    const startX = curr.x + (dPrevX / lenPrev) * r;
+    const startY = curr.y + (dPrevY / lenPrev) * r;
+    const endX = curr.x + (dNextX / lenNext) * r;
+    const endY = curr.y + (dNextY / lenNext) * r;
+
+    d += ` L ${startX} ${startY} Q ${curr.x} ${curr.y}, ${endX} ${endY}`;
+  }
+
+  const last = points[points.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+
 export function calculateEdgePath(
   sourceNode: FlowNode,
   targetNode: FlowNode,
@@ -130,10 +171,7 @@ export function calculateEdgePath(
       ];
     }
 
-    let pathStr = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      pathStr += ` L ${points[i].x} ${points[i].y}`;
-    }
+    const pathStr = pointsToRoundedPath(points, 10);
     const labelPosition = { x: controlPoint.x, y: controlPoint.y - 14 };
     return { path: pathStr, labelPosition, sourcePoint: p1, targetPoint: p2 };
   }
@@ -238,11 +276,8 @@ export function calculateEdgePath(
     points = [p1, { x: startX, y: startY }, { x: endX, y: endY }, p2];
   }
 
-  // Build SVG path
-  let pathStr = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    pathStr += ` L ${points[i].x} ${points[i].y}`;
-  }
+  // Build SVG path with Canva-style smooth rounded corners
+  const pathStr = pointsToRoundedPath(points, 10);
 
   // Compute best midpoint for label
   let midPoint: Point = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 - 14 };
