@@ -523,6 +523,7 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   value=""
                   options={templateOptions}
                   placeholder="Apply preset to all selected..."
+                  searchable
                   onChange={(val) => {
                     if (val) applyBatchStyleTemplate(val);
                   }}
@@ -935,13 +936,14 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   value={
                     allStyleTemplates.find(
                       (t) =>
-                        t.bg === (selectedNode.style.bg || 'auto') &&
+                        t.bg.toLowerCase() === (selectedNode.style.bg || 'auto').toLowerCase() &&
                         t.accentColor.toLowerCase() === (selectedNode.style.accentColor || '#2563EB').toLowerCase()
                     )?.id || ''
                   }
                   onChange={(val) => applyStyleTemplate(val)}
                   options={templateOptions}
                   placeholder="Custom Colors (Select preset...)"
+                  searchable
                 />
               </div>
 
