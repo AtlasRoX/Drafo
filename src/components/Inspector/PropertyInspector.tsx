@@ -10,7 +10,8 @@ import {
   RouteType,
   LineStyle,
   ArrowheadType,
-  NodeStatus
+  NodeStatus,
+  PortPosition
 } from '../../types/flow';
 import { NODE_COLOR_PALETTES } from '../../data/colorPalettes';
 import {
@@ -25,6 +26,9 @@ import {
   Activity,
   Box,
   Compass,
+  ArrowLeftRight,
+  Move,
+  RotateCcw,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -156,6 +160,8 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
     selectedType === 'edge' ? project.edges.find((e) => e.id === selectedId) : null;
   const selectedSection =
     selectedType === 'section' ? project.sections.find((s) => s.id === selectedId) : null;
+  const edgeSourceNode = selectedEdge ? project.nodes.find((n) => n.id === selectedEdge.fromNodeId) : null;
+  const edgeTargetNode = selectedEdge ? project.nodes.find((n) => n.id === selectedEdge.toNodeId) : null;
 
   const isContainerSelected =
     selectedNode && (selectedNode.type === 'container' || selectedNode.type === 'group');
@@ -1182,7 +1188,76 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             />
           </div>
 
-          {/* Edge Route Type */}
+          {/* Connection Endpoints & Direction */}
+          <div className="drafo-form-field">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label className="drafo-field-label" style={{ marginBottom: 0 }}>Connection Endpoints</label>
+              <button
+                className="drafo-btn-secondary"
+                style={{
+                  padding: '2px 8px',
+                  fontSize: 11,
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+                onClick={() => {
+                  updateEdgeProps({
+                    fromNodeId: selectedEdge.toNodeId,
+                    toNodeId: selectedEdge.fromNodeId,
+                    fromPort: selectedEdge.toPort,
+                    toPort: selectedEdge.fromPort
+                  });
+                }}
+                title="Swap source and target nodes & ports"
+              >
+                <ArrowLeftRight size={11} /> Reverse
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  From: {edgeSourceNode?.title || 'Source'}
+                </div>
+                <div className="drafo-segmented-control" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                  {(['top', 'right', 'bottom', 'left'] as PortPosition[]).map((p) => (
+                    <button
+                      key={p}
+                      className={`drafo-segment-btn ${selectedEdge.fromPort === p ? 'active' : ''}`}
+                      onClick={() => updateEdgeProps({ fromPort: p })}
+                      title={`From port: ${p}`}
+                      style={{ padding: '4px 2px', fontSize: 10, textTransform: 'capitalize' }}
+                    >
+                      {p.charAt(0).toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  To: {edgeTargetNode?.title || 'Target'}
+                </div>
+                <div className="drafo-segmented-control" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                  {(['top', 'right', 'bottom', 'left'] as PortPosition[]).map((p) => (
+                    <button
+                      key={p}
+                      className={`drafo-segment-btn ${selectedEdge.toPort === p ? 'active' : ''}`}
+                      onClick={() => updateEdgeProps({ toPort: p })}
+                      title={`To port: ${p}`}
+                      style={{ padding: '4px 2px', fontSize: 10, textTransform: 'capitalize' }}
+                    >
+                      {p.charAt(0).toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Edge Route Type & Draggable Waypoint */}
           <div className="drafo-form-field">
             <label className="drafo-field-label">Routing Geometry</label>
             <div className="drafo-segmented-control">
@@ -1196,6 +1271,58 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                 </button>
               ))}
             </div>
+
+            {/* Draggable Waypoint Status & Control */}
+            {selectedEdge.controlPoint ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 8,
+                  padding: '6px 10px',
+                  background: 'var(--drafo-bg-subtle, #F1F5F9)',
+                  border: '1px solid var(--drafo-border, #CBD5E1)',
+                  borderRadius: 6,
+                  fontSize: 11
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#2563EB', fontWeight: 600 }}>
+                  <Move size={12} />
+                  <span>Waypoint ({Math.round(selectedEdge.controlPoint.x)}, {Math.round(selectedEdge.controlPoint.y)})</span>
+                </span>
+                <button
+                  className="drafo-btn-secondary"
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    height: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                  onClick={() => updateEdgeProps({ controlPoint: undefined })}
+                  title="Reset connector to automatic routing path"
+                >
+                  <RotateCcw size={11} /> Auto Path
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: '6px 8px',
+                  background: 'rgba(37, 99, 235, 0.05)',
+                  border: '1px dashed rgba(37, 99, 235, 0.3)',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  color: 'var(--drafo-text-secondary, #64748B)',
+                  lineHeight: 1.35
+                }}
+              >
+                💡 <strong>Avoid Overlaps:</strong> Drag the blue diamond handle on the connector in canvas to freely bend or route around obstacles.
+              </div>
+            )}
           </div>
 
           {/* Edge Line Style */}
@@ -1276,6 +1403,31 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                   />
                 )
               )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <input
+                type="color"
+                value={selectedEdge.color || '#000000'}
+                onChange={(e) => updateEdgeProps({ color: e.target.value })}
+                style={{
+                  width: 30,
+                  height: 30,
+                  padding: 1,
+                  border: '1px solid var(--drafo-border, #CBD5E1)',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  background: 'transparent'
+                }}
+                title="Pick custom connector color"
+              />
+              <input
+                type="text"
+                className="drafo-input"
+                value={selectedEdge.color || ''}
+                onChange={(e) => updateEdgeProps({ color: e.target.value })}
+                placeholder="#2563EB"
+                style={{ flex: 1, fontFamily: 'monospace', fontSize: 12 }}
+              />
             </div>
           </div>
 

@@ -32,12 +32,18 @@ export function calculateEdgePath(
   targetNode: FlowNode,
   fromPort: PortPosition,
   toPort: PortPosition,
-  routeType: RouteType
+  routeType: RouteType,
+  controlPoint?: Point
 ): EdgePathData {
   const p1 = getPortCoordinates(sourceNode, fromPort);
   const p2 = getPortCoordinates(targetNode, toPort);
 
   if (routeType === 'straight') {
+    if (controlPoint) {
+      const path = `M ${p1.x} ${p1.y} L ${controlPoint.x} ${controlPoint.y} L ${p2.x} ${p2.y}`;
+      const labelPosition = { x: controlPoint.x, y: controlPoint.y - 14 };
+      return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+    }
     const path = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
     const labelPosition = {
       x: (p1.x + p2.x) / 2,
@@ -47,6 +53,19 @@ export function calculateEdgePath(
   }
 
   if (routeType === 'curved') {
+    if (controlPoint) {
+      // Quadratic Bezier passing smoothly through controlPoint:
+      // At t=0.5, B(0.5) reaches controlPoint exactly.
+      const cpX = 2 * controlPoint.x - (p1.x + p2.x) / 2;
+      const cpY = 2 * controlPoint.y - (p1.y + p2.y) / 2;
+      const path = `M ${p1.x} ${p1.y} Q ${cpX} ${cpY}, ${p2.x} ${p2.y}`;
+      const labelPosition = {
+        x: controlPoint.x,
+        y: controlPoint.y - 14
+      };
+      return { path, labelPosition, sourcePoint: p1, targetPoint: p2 };
+    }
+
     const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     const curvature = Math.max(25, Math.min(dist * 0.45, 120));
 
@@ -76,6 +95,49 @@ export function calculateEdgePath(
   }
 
   // Orthogonal (Smart Step routing)
+  if (controlPoint) {
+    let points: Point[] = [p1];
+    const isHorizontalExit = fromPort === 'left' || fromPort === 'right';
+    const isHorizontalEntry = toPort === 'left' || toPort === 'right';
+
+    if (isHorizontalExit && isHorizontalEntry) {
+      points = [
+        p1,
+        { x: controlPoint.x, y: p1.y },
+        { x: controlPoint.x, y: p2.y },
+        p2
+      ];
+    } else if (!isHorizontalExit && !isHorizontalEntry) {
+      points = [
+        p1,
+        { x: p1.x, y: controlPoint.y },
+        { x: p2.x, y: controlPoint.y },
+        p2
+      ];
+    } else if (isHorizontalExit && !isHorizontalEntry) {
+      points = [
+        p1,
+        { x: controlPoint.x, y: p1.y },
+        { x: controlPoint.x, y: p2.y },
+        p2
+      ];
+    } else {
+      points = [
+        p1,
+        { x: p1.x, y: controlPoint.y },
+        { x: p2.x, y: controlPoint.y },
+        p2
+      ];
+    }
+
+    let pathStr = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      pathStr += ` L ${points[i].x} ${points[i].y}`;
+    }
+    const labelPosition = { x: controlPoint.x, y: controlPoint.y - 14 };
+    return { path: pathStr, labelPosition, sourcePoint: p1, targetPoint: p2 };
+  }
+
   const clearance = 24;
   let points: Point[] = [p1];
 

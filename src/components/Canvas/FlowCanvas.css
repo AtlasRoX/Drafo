@@ -1289,6 +1289,34 @@
   color: #EF4444;
 }
 
+.drafo-edge-action-btn.reset:hover {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+/* Draggable Connector Waypoint Control */
+.drafo-edge-waypoint-handle {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s ease, fill 0.15s ease;
+  transform-origin: center;
+}
+
+.drafo-edge-waypoint-handle:hover {
+  transform: scale(1.35);
+  fill: #2563EB !important;
+  stroke: #FFFFFF !important;
+  cursor: grab;
+}
+
+.drafo-edge-waypoint-handle:active {
+  cursor: grabbing;
+  transform: scale(1.45);
+}
+
+.drafo-edge-endpoint-marker {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
 /* Animated Edge Flow */
 .drafo-edge-path.is-animated {
   animation: drafoFlowDash 1.2s linear infinite;

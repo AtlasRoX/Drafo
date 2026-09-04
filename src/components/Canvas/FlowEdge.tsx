@@ -13,6 +13,7 @@ interface FlowEdgeProps {
   onSelect: (edgeId: string, e: React.MouseEvent) => void;
   onUpdate: (updatedEdge: FlowEdgeType) => void;
   onDelete?: (edgeId: string) => void;
+  onStartDragWaypoint?: (edgeId: string, e: React.MouseEvent) => void;
 }
 
 export const FlowEdge: React.FC<FlowEdgeProps> = ({
@@ -23,7 +24,8 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
   isSimActive,
   onSelect,
   onUpdate,
-  onDelete
+  onDelete,
+  onStartDragWaypoint
 }) => {
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [tempLabel, setTempLabel] = useState(edge.label);
@@ -54,12 +56,13 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
     onUpdate({ ...edge, routeType: nextType });
   };
 
-  const { path, labelPosition } = calculateEdgePath(
+  const { path, labelPosition, sourcePoint, targetPoint } = calculateEdgePath(
     sourceNode,
     targetNode,
     edge.fromPort,
     edge.toPort,
-    edge.routeType
+    edge.routeType,
+    edge.controlPoint
   );
 
   const strokeColor = isSelected ? '#2563EB' : edge.color || '#000000';
@@ -214,23 +217,114 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
         </g>
       )}
 
+      {/* Endpoint Connection Rings (Visible on Selected Edge) */}
+      {isSelected && (
+        <g className="drafo-edge-endpoints" pointerEvents="none">
+          <circle
+            cx={sourcePoint.x}
+            cy={sourcePoint.y}
+            r={4}
+            fill="#FFFFFF"
+            stroke="#2563EB"
+            strokeWidth={2}
+          />
+          <circle
+            cx={targetPoint.x}
+            cy={targetPoint.y}
+            r={4}
+            fill="#FFFFFF"
+            stroke="#2563EB"
+            strokeWidth={2}
+          />
+        </g>
+      )}
+
+      {/* Draggable Waypoint / Bending Handle (Visible on Selected Edge) */}
+      {isSelected && (
+        <g className="drafo-edge-waypoint-group">
+          {/* Subtle guideline if moved from auto label position */}
+          {edge.controlPoint && (
+            <line
+              x1={labelPosition.x}
+              y1={labelPosition.y}
+              x2={edge.controlPoint.x}
+              y2={edge.controlPoint.y}
+              stroke="#93C5FD"
+              strokeWidth={1}
+              strokeDasharray="2,2"
+              pointerEvents="none"
+            />
+          )}
+          {/* Transparent large hit area */}
+          <circle
+            cx={edge.controlPoint ? edge.controlPoint.x : labelPosition.x}
+            cy={edge.controlPoint ? edge.controlPoint.y : labelPosition.y + (edge.label ? 0 : 12)}
+            r={14}
+            fill="transparent"
+            style={{ cursor: 'grab' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartDragWaypoint?.(edge.id, e);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onUpdate({ ...edge, controlPoint: undefined });
+            }}
+          />
+          {/* Visual waypoint circle */}
+          <circle
+            cx={edge.controlPoint ? edge.controlPoint.x : labelPosition.x}
+            cy={edge.controlPoint ? edge.controlPoint.y : labelPosition.y + (edge.label ? 0 : 12)}
+            r={6.5}
+            fill="#FFFFFF"
+            stroke="#2563EB"
+            strokeWidth={2.5}
+            className="drafo-edge-waypoint-handle"
+            style={{
+              cursor: 'grab',
+              filter: 'drop-shadow(0 2px 5px rgba(37, 99, 235, 0.35))'
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartDragWaypoint?.(edge.id, e);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onUpdate({ ...edge, controlPoint: undefined });
+            }}
+          />
+        </g>
+      )}
+
       {/* Midpoint Quick Action Pill (Appears on Selected Edge) */}
       {isSelected && !isEditingLabel && (
         <foreignObject
-          x={labelPosition.x - (edge.label ? -25 : 35)}
-          y={labelPosition.y - 28}
-          width={70}
-          height={26}
+          x={labelPosition.x - (edge.controlPoint ? 52 : (edge.label ? -25 : 35))}
+          y={labelPosition.y - 32}
+          width={edge.controlPoint ? 104 : 70}
+          height={28}
           className="drafo-edge-action-pill"
         >
           <div className="drafo-edge-actions">
             <button
               className="drafo-edge-action-btn"
               onClick={cycleRouteType}
-              title={`Switch Route Style (Current: ${edge.routeType || 'bezier'})`}
+              title={`Switch Route Style (Current: ${edge.routeType || 'curved'})`}
             >
               ⤹
             </button>
+            {edge.controlPoint && (
+              <button
+                className="drafo-edge-action-btn reset"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate({ ...edge, controlPoint: undefined });
+                }}
+                title="Reset Connector to Default Auto Path"
+              >
+                ↺
+              </button>
+            )}
             {onDelete && (
               <button
                 className="drafo-edge-action-btn delete"

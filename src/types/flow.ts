@@ -107,6 +107,7 @@ export interface FlowEdge {
   bidirectional?: boolean;
   isAnimated?: boolean;
   latency?: string;
+  controlPoint?: { x: number; y: number };
 }
 
 export interface FlowSection {

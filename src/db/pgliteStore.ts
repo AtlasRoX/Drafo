@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS edges (
   bidirectional BOOLEAN DEFAULT FALSE,
   is_animated BOOLEAN DEFAULT FALSE,
   latency TEXT,
+  control_point JSONB,
   PRIMARY KEY (id, project_id)
 );
 
@@ -163,6 +164,14 @@ export async function getPGlite(): Promise<PGlite | null> {
 
       // Execute schema definition
       await pg.exec(SCHEMA_SQL);
+
+      // Migration for existing local databases
+      try {
+        await pg.exec('ALTER TABLE edges ADD COLUMN IF NOT EXISTS control_point JSONB;');
+      } catch {
+        // column may already exist
+      }
+
       dbInstance = pg;
 
       // Auto-migrate legacy localStorage projects if DB is empty
@@ -272,8 +281,8 @@ async function saveProjectInternal(pg: PGlite, project: FlowProject): Promise<vo
       await tx.query(
         `INSERT INTO edges (
            id, project_id, from_node_id, to_node_id, from_port, to_port, label, step_number,
-           line_style, route_type, color, width, arrowhead, bidirectional, is_animated, latency
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);`,
+           line_style, route_type, color, width, arrowhead, bidirectional, is_animated, latency, control_point
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);`,
         [
           edge.id,
           project.id,
@@ -290,7 +299,8 @@ async function saveProjectInternal(pg: PGlite, project: FlowProject): Promise<vo
           edge.arrowhead || 'arrow',
           edge.bidirectional || false,
           edge.isAnimated || false,
-          edge.latency || null
+          edge.latency || null,
+          edge.controlPoint ? JSON.stringify(edge.controlPoint) : null
         ]
       );
     }
@@ -428,7 +438,12 @@ export async function loadAllProjects(): Promise<FlowProject[]> {
         arrowhead: e.arrowhead,
         bidirectional: !!e.bidirectional,
         isAnimated: !!e.is_animated,
-        latency: e.latency || undefined
+        latency: e.latency || undefined,
+        controlPoint: e.control_point
+          ? typeof e.control_point === 'string'
+            ? JSON.parse(e.control_point)
+            : e.control_point
+          : undefined
       }));
 
       const sections: FlowSection[] = sectionsResult.rows.map((s) => ({

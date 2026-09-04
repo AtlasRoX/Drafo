@@ -162,6 +162,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
+  // State for dragging edge waypoint / custom routing
+  const [draggingWaypoint, setDraggingWaypoint] = useState<{
+    edgeId: string;
+    startX: number;
+    startY: number;
+  } | null>(null);
+
   // State for Smart Magnetic Alignment Guides
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
 
@@ -519,6 +526,19 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       // Broadcast local cursor position to remote peers
       collabEngine.setLocalCursor(canvasPos.x, canvasPos.y, selectedId);
 
+      // Dragging Edge Waypoint / Connector Bending
+      if (draggingWaypoint) {
+        const snappedX = snap(canvasPos.x);
+        const snappedY = snap(canvasPos.y);
+        const updatedEdges = project.edges.map((edge) =>
+          edge.id === draggingWaypoint.edgeId
+            ? { ...edge, controlPoint: { x: snappedX, y: snappedY } }
+            : edge
+        );
+        onUpdateProject({ ...project, edges: updatedEdges });
+        return;
+      }
+
       // Node Dragging
       if (draggingNodeId) {
         const targetNode = project.nodes.find((n) => n.id === draggingNodeId);
@@ -722,12 +742,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       if (resizing) {
         setResizing(null);
       }
+      if (draggingWaypoint) {
+        setDraggingWaypoint(null);
+      }
 
       // Commit dragged or resized project state to undo/redo history once on mouse release
       if (dragSnapshotRef.current) {
         const hasChanged =
           JSON.stringify(dragSnapshotRef.current.nodes) !== JSON.stringify(projectRef.current.nodes) ||
-          JSON.stringify(dragSnapshotRef.current.sections) !== JSON.stringify(projectRef.current.sections);
+          JSON.stringify(dragSnapshotRef.current.sections) !== JSON.stringify(projectRef.current.sections) ||
+          JSON.stringify(dragSnapshotRef.current.edges) !== JSON.stringify(projectRef.current.edges);
         if (hasChanged) {
           onUpdateProject(projectRef.current);
         }
@@ -920,6 +944,20 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     const updated = project.edges.map((e) => (e.id === updatedEdge.id ? updatedEdge : e));
     onUpdateProject({ ...project, edges: updated });
   };
+
+  const handleStartDragWaypoint = useCallback(
+    (edgeId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dragSnapshotRef.current = project;
+      const canvasPos = screenToCanvas(e.clientX, e.clientY);
+      setDraggingWaypoint({
+        edgeId,
+        startX: canvasPos.x,
+        startY: canvasPos.y
+      });
+    },
+    [project, screenToCanvas]
+  );
 
   const handleUpdateSection = (updatedSection: FlowSection) => {
     const updated = project.sections.map((s) => (s.id === updatedSection.id ? updatedSection : s));
@@ -1154,6 +1192,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                   onSelect(id, 'edge');
                 }}
                 onUpdate={handleUpdateEdge}
+                onStartDragWaypoint={handleStartDragWaypoint}
                 onDelete={(edgeId) => {
                   onUpdateProject({
                     ...project,

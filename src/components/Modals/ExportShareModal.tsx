@@ -673,7 +673,13 @@ export const ExportShareModal: React.FC<ExportShareModalProps> = ({
                                 offsetTo,
                                 edge.fromPort,
                                 edge.toPort,
-                                edge.routeType
+                                edge.routeType,
+                                edge.controlPoint
+                                  ? {
+                                      x: edge.controlPoint.x - bounds.minX,
+                                      y: edge.controlPoint.y - bounds.minY
+                                    }
+                                  : undefined
                               );
 
                               const strokeColor = edge.color || '#2563EB';
