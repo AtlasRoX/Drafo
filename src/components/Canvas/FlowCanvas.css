@@ -820,14 +820,16 @@
 .drafo-status-dot {
   width: 6px;
   height: 6px;
+  min-width: 6px;
+  min-height: 6px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .drafo-status-dot.online {
   background-color: #10B981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .drafo-status-dot.busy {
