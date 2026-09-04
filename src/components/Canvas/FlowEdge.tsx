@@ -279,7 +279,7 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
 
           {/* Quick Floating Action Controls when Edge is Selected */}
           {isSelected && !isEditingLabel && (
-            <foreignObject x={-100} y={22} width={200} height={34} className="drafo-edge-action-pill">
+            <foreignObject x={-100} y={28} width={200} height={34} className="drafo-edge-action-pill">
               <div className="drafo-edge-actions" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
@@ -361,17 +361,20 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
   onResetWaypoint
 }) => {
   return (
-    <g className="drafo-canva-edge-controls" style={{ pointerEvents: 'auto' }}>
+    <g className="drafo-canva-edge-controls" style={{ pointerEvents: 'all' }}>
       {/* 1. Start Endpoint Handle (Drag to reconnect or snap start) */}
-      <g className="drafo-canva-handle-group">
+      <g className="drafo-canva-handle-group" style={{ pointerEvents: 'all' }}>
         <circle
+          className="drafo-canva-handle-hitarea"
           cx={sourcePoint.x}
           cy={sourcePoint.y}
-          r={18}
-          fill="transparent"
-          style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
+          r={20}
+          fill="#FFFFFF"
+          opacity={0.001}
+          style={{ cursor: 'crosshair', pointerEvents: 'all' }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragEndpoint?.(edge.id, 'source', e);
           }}
         >
@@ -387,26 +390,30 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           className="drafo-canva-endpoint-handle"
           style={{
             cursor: 'crosshair',
-            pointerEvents: 'auto',
+            pointerEvents: 'all',
             filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
           }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragEndpoint?.(edge.id, 'source', e);
           }}
         />
       </g>
 
       {/* 2. End Endpoint Handle (Drag to reconnect or snap end) */}
-      <g className="drafo-canva-handle-group">
+      <g className="drafo-canva-handle-group" style={{ pointerEvents: 'all' }}>
         <circle
+          className="drafo-canva-handle-hitarea"
           cx={targetPoint.x}
           cy={targetPoint.y}
-          r={18}
-          fill="transparent"
-          style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
+          r={20}
+          fill="#FFFFFF"
+          opacity={0.001}
+          style={{ cursor: 'crosshair', pointerEvents: 'all' }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragEndpoint?.(edge.id, 'target', e);
           }}
         >
@@ -422,30 +429,35 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           className="drafo-canva-endpoint-handle"
           style={{
             cursor: 'crosshair',
-            pointerEvents: 'auto',
+            pointerEvents: 'all',
             filter: 'drop-shadow(0 2px 6px rgba(37, 99, 235, 0.45))'
           }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragEndpoint?.(edge.id, 'target', e);
           }}
         />
       </g>
 
       {/* 3. Canva Curvature & Elbow Waypoint Handle (Pinned directly on line, 1:1 cursor sync) */}
-      <g className="drafo-canva-handle-group">
+      <g className="drafo-canva-handle-group" style={{ pointerEvents: 'all' }}>
         <circle
+          className="drafo-canva-handle-hitarea"
           cx={waypointPosition.x}
           cy={waypointPosition.y}
-          r={18}
-          fill="transparent"
-          style={{ cursor: 'grab', pointerEvents: 'auto' }}
+          r={20}
+          fill="#FFFFFF"
+          opacity={0.001}
+          style={{ cursor: 'grab', pointerEvents: 'all' }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragWaypoint?.(edge.id, e);
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onResetWaypoint?.(edge.id);
           }}
         >
@@ -461,15 +473,17 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
           className="drafo-canva-waypoint-handle"
           style={{
             cursor: 'grab',
-            pointerEvents: 'auto',
+            pointerEvents: 'all',
             filter: 'drop-shadow(0 2px 8px rgba(37, 99, 235, 0.5))'
           }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onStartDragWaypoint?.(edge.id, e);
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onResetWaypoint?.(edge.id);
           }}
         />

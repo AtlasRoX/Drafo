@@ -620,12 +620,12 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       // Dragging Edge Waypoint / Connector Bending
       if (draggingWaypoint) {
-        const snappedX = snap(canvasPos.x);
-        const snappedY = snap(canvasPos.y);
+        const curX = Math.round(canvasPos.x);
+        const curY = Math.round(canvasPos.y);
         const proj = projectRef.current;
         const updatedEdges = proj.edges.map((edge) =>
           edge.id === draggingWaypoint.edgeId
-            ? { ...edge, controlPoint: { x: snappedX, y: snappedY } }
+            ? { ...edge, controlPoint: { x: curX, y: curY } }
             : edge
         );
         const liveUpdate = onUpdateProjectLive || onUpdateProject;
@@ -831,20 +831,27 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       if (draggingEdgeEndpoint) {
         type MagnetType = { nodeId: string; port: PortPosition; x: number; y: number };
         let foundMagnet: MagnetType | null = null;
-        let minMagDist = 32;
+        let minMagDist = 28;
 
         const currentEdge = projectRef.current.edges.find((e) => e.id === draggingEdgeEndpoint.edgeId);
         const prohibitedNodeId =
           draggingEdgeEndpoint.endpoint === 'source' ? currentEdge?.toNodeId : currentEdge?.fromNodeId;
+        const originNodeId =
+          draggingEdgeEndpoint.endpoint === 'source' ? currentEdge?.fromNodeId : currentEdge?.toNodeId;
+        const originPort =
+          draggingEdgeEndpoint.endpoint === 'source' ? currentEdge?.fromPort : currentEdge?.toPort;
 
         for (const node of projectRef.current.nodes) {
           if (node.id === prohibitedNodeId) continue;
           if (node.type === 'container' || node.type === 'group') continue; // Never snap to container/group
           const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
           for (const p of ports) {
+            // Do not immediately snap back to the origin port we are pulling away from
+            const isOriginPort = node.id === originNodeId && p === originPort;
             const pCoord = getPortCoordinates(node, p);
             const dist = Math.hypot(canvasPos.x - pCoord.x, canvasPos.y - pCoord.y);
-            if (dist < minMagDist) {
+            const threshold = isOriginPort ? 10 : minMagDist;
+            if (dist < threshold && dist < minMagDist) {
               minMagDist = dist;
               foundMagnet = {
                 nodeId: node.id,

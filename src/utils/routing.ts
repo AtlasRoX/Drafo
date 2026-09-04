@@ -215,8 +215,11 @@ function computeOrthogonalPoints(
 
     if (fromPort === 'right' && toPort === 'left') {
       if (controlPoint) {
-        // If user dragged vertically away from baseline (> 12px), create overhead/underhead bridge
-        if (Math.abs(controlPoint.y - baseY) > 12) {
+        const isHorizontalAligned = Math.abs(p1.y - p2.y) < 20;
+        if (isHorizontalAligned || Math.abs(controlPoint.y - baseY) > 12) {
+          const minX = p1Stub.x;
+          const maxX = p2Stub.x;
+          const handleX = minX < maxX ? Math.max(minX, Math.min(controlPoint.x, maxX)) : controlPoint.x;
           points = [
             p1,
             { x: p1Stub.x, y: p1.y },
@@ -225,16 +228,18 @@ function computeOrthogonalPoints(
             { x: p2Stub.x, y: p2.y },
             p2
           ];
-          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: controlPoint.y };
+          waypoint = { x: handleX, y: controlPoint.y };
         } else {
-          // User shifted the vertical step horizontally
           const minX = p1Stub.x;
           const maxX = p2Stub.x;
           const stepX = minX < maxX
             ? Math.max(minX, Math.min(controlPoint.x, maxX))
             : controlPoint.x;
+          const minY = Math.min(p1.y, p2.y);
+          const maxY = Math.max(p1.y, p2.y);
+          const handleY = minY < maxY ? Math.max(minY, Math.min(controlPoint.y, maxY)) : baseY;
           points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
-          waypoint = { x: stepX, y: baseY };
+          waypoint = { x: stepX, y: handleY };
         }
       } else {
         // Natural
@@ -265,7 +270,11 @@ function computeOrthogonalPoints(
       }
     } else if (fromPort === 'left' && toPort === 'right') {
       if (controlPoint) {
-        if (Math.abs(controlPoint.y - baseY) > 12) {
+        const isHorizontalAligned = Math.abs(p1.y - p2.y) < 20;
+        if (isHorizontalAligned || Math.abs(controlPoint.y - baseY) > 12) {
+          const minX = p2Stub.x;
+          const maxX = p1Stub.x;
+          const handleX = minX < maxX ? Math.max(minX, Math.min(controlPoint.x, maxX)) : controlPoint.x;
           points = [
             p1,
             { x: p1Stub.x, y: p1.y },
@@ -274,15 +283,18 @@ function computeOrthogonalPoints(
             { x: p2Stub.x, y: p2.y },
             p2
           ];
-          waypoint = { x: (p1Stub.x + p2Stub.x) / 2, y: controlPoint.y };
+          waypoint = { x: handleX, y: controlPoint.y };
         } else {
           const minX = p2Stub.x;
           const maxX = p1Stub.x;
           const stepX = minX < maxX
             ? Math.max(minX, Math.min(controlPoint.x, maxX))
             : controlPoint.x;
+          const minY = Math.min(p1.y, p2.y);
+          const maxY = Math.max(p1.y, p2.y);
+          const handleY = minY < maxY ? Math.max(minY, Math.min(controlPoint.y, maxY)) : baseY;
           points = [p1, { x: stepX, y: p1.y }, { x: stepX, y: p2.y }, p2];
-          waypoint = { x: stepX, y: baseY };
+          waypoint = { x: stepX, y: handleY };
         }
       } else {
         if (p2.x <= p1.x - 2 * stub) {
@@ -331,8 +343,11 @@ function computeOrthogonalPoints(
 
     if (fromPort === 'bottom' && toPort === 'top') {
       if (controlPoint) {
-        if (Math.abs(controlPoint.x - baseX) > 12) {
-          // Side bridge at controlPoint.x
+        const isVerticalAligned = Math.abs(p1.x - p2.x) < 20;
+        if (isVerticalAligned || Math.abs(controlPoint.x - baseX) > 12) {
+          const minY = p1Stub.y;
+          const maxY = p2Stub.y;
+          const handleY = minY < maxY ? Math.max(minY, Math.min(controlPoint.y, maxY)) : controlPoint.y;
           points = [
             p1,
             { x: p1.x, y: p1Stub.y },
@@ -341,16 +356,18 @@ function computeOrthogonalPoints(
             { x: p2.x, y: p2Stub.y },
             p2
           ];
-          waypoint = { x: controlPoint.x, y: (p1Stub.y + p2Stub.y) / 2 };
+          waypoint = { x: controlPoint.x, y: handleY };
         } else {
-          // Shift horizontal step vertically
           const minY = p1Stub.y;
           const maxY = p2Stub.y;
           const stepY = minY < maxY
             ? Math.max(minY, Math.min(controlPoint.y, maxY))
             : controlPoint.y;
+          const minX = Math.min(p1.x, p2.x);
+          const maxX = Math.max(p1.x, p2.x);
+          const handleX = minX < maxX ? Math.max(minX, Math.min(controlPoint.x, maxX)) : baseX;
           points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
-          waypoint = { x: baseX, y: stepY };
+          waypoint = { x: handleX, y: stepY };
         }
       } else {
         if (p2.y >= p1.y + 2 * stub) {
@@ -378,7 +395,11 @@ function computeOrthogonalPoints(
       }
     } else if (fromPort === 'top' && toPort === 'bottom') {
       if (controlPoint) {
-        if (Math.abs(controlPoint.x - baseX) > 12) {
+        const isVerticalAligned = Math.abs(p1.x - p2.x) < 20;
+        if (isVerticalAligned || Math.abs(controlPoint.x - baseX) > 12) {
+          const minY = p2Stub.y;
+          const maxY = p1Stub.y;
+          const handleY = minY < maxY ? Math.max(minY, Math.min(controlPoint.y, maxY)) : controlPoint.y;
           points = [
             p1,
             { x: p1.x, y: p1Stub.y },
@@ -387,15 +408,18 @@ function computeOrthogonalPoints(
             { x: p2.x, y: p2Stub.y },
             p2
           ];
-          waypoint = { x: controlPoint.x, y: (p1Stub.y + p2Stub.y) / 2 };
+          waypoint = { x: controlPoint.x, y: handleY };
         } else {
           const minY = p2Stub.y;
           const maxY = p1Stub.y;
           const stepY = minY < maxY
             ? Math.max(minY, Math.min(controlPoint.y, maxY))
             : controlPoint.y;
+          const minX = Math.min(p1.x, p2.x);
+          const maxX = Math.max(p1.x, p2.x);
+          const handleX = minX < maxX ? Math.max(minX, Math.min(controlPoint.x, maxX)) : baseX;
           points = [p1, { x: p1.x, y: stepY }, { x: p2.x, y: stepY }, p2];
-          waypoint = { x: baseX, y: stepY };
+          waypoint = { x: handleX, y: stepY };
         }
       } else {
         if (p2.y <= p1.y - 2 * stub) {
@@ -441,8 +465,11 @@ function computeOrthogonalPoints(
   // =========================================================================
   else if (isHExit && !isHEntry) {
     if (controlPoint) {
+      const minY = Math.min(p1.y, p2.y);
+      const maxY = Math.max(p1.y, p2.y);
+      const handleY = minY < maxY ? Math.max(minY, Math.min(controlPoint.y, maxY)) : (p1.y + p2.y) / 2;
       points = [p1, { x: controlPoint.x, y: p1.y }, { x: controlPoint.x, y: p2.y }, p2];
-      waypoint = { x: controlPoint.x, y: (p1.y + p2.y) / 2 };
+      waypoint = { x: controlPoint.x, y: handleY };
     } else {
       const isExitRight = fromPort === 'right';
       const isEntryBottom = toPort === 'bottom';
@@ -467,8 +494,11 @@ function computeOrthogonalPoints(
   // =========================================================================
   else {
     if (controlPoint) {
+      const minX = Math.min(p1.x, p2.x);
+      const maxX = Math.max(p1.x, p2.x);
+      const handleX = minX < maxX ? Math.max(minX, Math.min(controlPoint.x, maxX)) : (p1.x + p2.x) / 2;
       points = [p1, { x: p1.x, y: controlPoint.y }, { x: p2.x, y: controlPoint.y }, p2];
-      waypoint = { x: (p1.x + p2.x) / 2, y: controlPoint.y };
+      waypoint = { x: handleX, y: controlPoint.y };
     } else {
       const isExitBottom = fromPort === 'bottom';
       const isEntryRight = toPort === 'right';

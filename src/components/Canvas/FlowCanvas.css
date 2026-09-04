@@ -76,9 +76,10 @@
 
 .drafo-canvas-handles-overlay .drafo-canva-edge-controls,
 .drafo-canvas-handles-overlay .drafo-canva-handle-group,
+.drafo-canvas-handles-overlay .drafo-canva-handle-hitarea,
 .drafo-canvas-handles-overlay .drafo-canva-endpoint-handle,
 .drafo-canvas-handles-overlay .drafo-canva-waypoint-handle {
-  pointer-events: auto;
+  pointer-events: all !important;
 }
 
 .drafo-marquee-group,
@@ -1342,57 +1343,66 @@
   animation: drafoFlowDash 0.8s linear infinite;
 }
 
-/* Canva-Style Connector Endpoint & Waypoint Handles */
+/* Canva-Style Connector Endpoint & Waypoint Handles (Zero-Jump In-Place Scaling) */
 .drafo-canva-endpoint-handle {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s ease, fill 0.15s ease;
+  transform-box: fill-box;
   transform-origin: center;
+  transition: r 0.15s ease, stroke 0.15s ease, fill 0.15s ease, stroke-width 0.15s ease;
 }
 
 .drafo-canva-endpoint-handle:hover {
-  transform: scale(1.35);
+  r: 8px;
   fill: #2563EB !important;
   stroke: #FFFFFF !important;
+  stroke-width: 3px;
   cursor: crosshair;
 }
 
 .drafo-canva-endpoint-handle:active {
+  r: 9px;
+  stroke-width: 3px;
   cursor: crosshair;
-  transform: scale(1.45);
 }
 
 .drafo-canva-waypoint-handle {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s ease, fill 0.15s ease;
+  transform-box: fill-box;
   transform-origin: center;
+  transition: r 0.15s ease, stroke 0.15s ease, fill 0.15s ease, stroke-width 0.15s ease;
 }
 
 .drafo-canva-waypoint-handle:hover {
-  transform: scale(1.35);
+  r: 8.5px;
   fill: #2563EB !important;
   stroke: #FFFFFF !important;
+  stroke-width: 3px;
   cursor: grab;
 }
 
 .drafo-canva-waypoint-handle:active {
+  r: 9.5px;
+  stroke-width: 3px;
   cursor: grabbing;
-  transform: scale(1.45);
 }
 
 /* Draggable Connector Waypoint Control */
 .drafo-edge-waypoint-handle {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s ease, fill 0.15s ease;
+  transform-box: fill-box;
   transform-origin: center;
+  transition: r 0.15s ease, stroke 0.15s ease, fill 0.15s ease, stroke-width 0.15s ease;
 }
 
 .drafo-edge-waypoint-handle:hover {
-  transform: scale(1.35);
+  r: 8.5px;
   fill: #2563EB !important;
   stroke: #FFFFFF !important;
+  stroke-width: 3px;
   cursor: grab;
 }
 
 .drafo-edge-waypoint-handle:active {
+  r: 9.5px;
+  stroke-width: 3px;
   cursor: grabbing;
-  transform: scale(1.45);
 }
 
 .drafo-edge-endpoint-marker {
