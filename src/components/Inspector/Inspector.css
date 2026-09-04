@@ -436,4 +436,210 @@
   left: 0;
 }
 
+/* ==========================================================================
+   UNIFIED STYLE & APPEARANCE SYSTEM
+   ========================================================================== */
+
+.drafo-style-section-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.drafo-style-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drafo-style-subgroup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drafo-style-sublabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.drafo-color-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drafo-color-picker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.drafo-color-picker-pill:hover {
+  border-color: #2563EB;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
+}
+
+.drafo-color-pill-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.drafo-color-pill-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: -0.02em;
+}
+
+.drafo-quick-dots-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.drafo-quick-dot-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.drafo-quick-dot-btn:hover {
+  transform: scale(1.2);
+}
+
+.drafo-quick-dot-btn.active {
+  border-color: #0F172A;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.2);
+}
+
+.drafo-quick-shortcuts-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.drafo-quick-shortcut-btn {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drafo-quick-shortcut-btn:hover {
+  background: #F1F5F9;
+  color: #1E293B;
+  border-color: #94A3B8;
+}
+
+.drafo-quick-shortcut-btn.active {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+.drafo-save-template-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563EB;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 5px;
+  padding: 2px 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.drafo-save-template-btn:hover {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.drafo-save-template-dialog {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  background: #FFFFFF;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+}
+
+.drafo-save-template-input {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  outline: none;
+}
+
+.drafo-save-template-input:focus {
+  border-color: #2563EB;
+}
+
+.drafo-save-template-confirm {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.drafo-save-template-cancel {
+  font-size: 10.5px;
+  padding: 3px 6px;
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
 
