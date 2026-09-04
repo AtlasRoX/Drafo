@@ -10,7 +10,7 @@ export const AgentationToolbar: React.FC = () => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
+  if (process.env.NODE_ENV !== 'development' || !mounted) {
     return null;
   }
 
