@@ -10,7 +10,6 @@ import {
   FileCode,
   Image as ImageIcon,
   Check,
-  ChevronDown,
   ArrowLeft,
   Keyboard,
   Sparkles,
@@ -67,6 +66,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!showExportMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportMenu]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -211,14 +222,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Export Dropdown */}
-        <div className="drafo-export-dropdown-wrapper">
+        <div className="drafo-export-dropdown-wrapper" ref={exportMenuRef}>
           <button
-            className="drafo-nav-btn export-primary-btn"
+            className={`drafo-nav-btn export-primary-btn ${showExportMenu ? 'is-active' : ''}`}
             onClick={() => setShowExportMenu(!showExportMenu)}
+            title="Export Diagram"
+            aria-label="Export Diagram"
           >
-            <Download size={15} />
-            <span>Export</span>
-            <ChevronDown size={14} />
+            <Download size={16} />
           </button>
 
           {showExportMenu && (
