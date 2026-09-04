@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { FlowNode as FlowNodeType, PortPosition, NodeType } from '../../types/flow';
 import { NODE_COLOR_PALETTES } from '../../data/colorPalettes';
 import {
@@ -1093,3 +1093,30 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
     </div>
   );
 };
+
+function flowNodeAreEqual(prev: FlowNodeProps, next: FlowNodeProps): boolean {
+  // Re-render only when the node data or selection/sim status changes
+  // Callback prop reference changes (from parent inline arrows) are intentionally ignored
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.isSimActive !== next.isSimActive) return false;
+  if (prev.isSimTarget !== next.isSimTarget) return false;
+  const a = prev.node;
+  const b = next.node;
+  return (
+    a.id === b.id &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height &&
+    a.title === b.title &&
+    a.subtitle === b.subtitle &&
+    a.status === b.status &&
+    a.isLocked === b.isLocked &&
+    a.type === b.type &&
+    a.metric === b.metric &&
+    JSON.stringify(a.style) === JSON.stringify(b.style) &&
+    JSON.stringify(a.tags) === JSON.stringify(b.tags)
+  );
+}
+
+export const FlowNodeMemo = memo(FlowNode, flowNodeAreEqual);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FlowProject,
   FlowNode as FlowNodeType,
@@ -8,8 +8,8 @@ import {
   FlowSection,
   PortPosition
 } from '../../types/flow';
-import { FlowNode } from './FlowNode';
-import { FlowEdge, FlowEdgeHandles } from './FlowEdge';
+import { FlowNode, FlowNodeMemo } from './FlowNode';
+import { FlowEdge, FlowEdgeMemo, FlowEdgeHandles } from './FlowEdge';
 import { SectionHeader } from './SectionHeader';
 import { getPortCoordinates, calculateEdgePath } from '../../utils/routing';
 import {
@@ -203,8 +203,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
   const selectedIdsRef = useRef(selectedIds);
   selectedIdsRef.current = selectedIds;
+  // O(1) Set for hot-path .has() checks in handleMouseMove
+  const selectedSetRef = useRef<Set<string>>(new Set(selectedIds));
+  selectedSetRef.current = useMemo(() => new Set(selectedIds), [selectedIds]);
   const hasDraggedNodeRef = useRef(false);
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  // Lightweight drag snapshot — only positions, no JSON.parse(JSON.stringify)
+  const dragInitialPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const dragInitialEdgeControlsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const dragInitialOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
 
   // Track space key for panning, V/H for tool mode, M for mini-map, Ctrl+A for select all
   useEffect(() => {
@@ -363,7 +371,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     if (isSpacePressed || resizing) return;
     e.stopPropagation();
 
-    const targetNode = project.nodes.find((n) => n.id === nodeId);
+    const proj = projectRef.current;
+    const targetNode = proj.nodes.find((n) => n.id === nodeId);
     if (!targetNode || targetNode.isLocked) return;
 
     hasDraggedNodeRef.current = false;
@@ -380,11 +389,47 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     }
     // If nodeId is already in curSelected and !isMulti, keep current selection for group dragging
 
-    dragSnapshotRef.current = JSON.parse(JSON.stringify(project));
+    // Build the effective selected set (expand containers to include children)
+    const activeSelectedIds = curSelected.includes(nodeId) ? curSelected : [nodeId];
+    const selectedSet = new Set(activeSelectedIds);
+    proj.nodes.forEach((node) => {
+      if (selectedSet.has(node.id) && (node.type === 'container' || node.type === 'group')) {
+        proj.nodes.forEach((child) => {
+          if (
+            child.id !== node.id &&
+            child.x >= node.x &&
+            child.y >= node.y &&
+            child.x + child.width <= node.x + node.width &&
+            child.y + child.height <= node.y + node.height
+          ) {
+            selectedSet.add(child.id);
+          }
+        });
+      }
+    });
+
+    // Lightweight snapshot: store only positions (replaces JSON.parse(JSON.stringify(project)))
+    const posMap = new Map<string, { x: number; y: number }>();
+    proj.nodes.forEach((n) => {
+      if (selectedSet.has(n.id)) posMap.set(n.id, { x: n.x, y: n.y });
+    });
+    dragInitialPositionsRef.current = posMap;
+
+    // Snapshot edge control points for internal edges (both ends in selection)
+    const edgeControlMap = new Map<string, { x: number; y: number }>();
+    proj.edges.forEach((edge) => {
+      if (edge.controlPoint && selectedSet.has(edge.fromNodeId) && selectedSet.has(edge.toNodeId)) {
+        edgeControlMap.set(edge.id, { x: edge.controlPoint.x, y: edge.controlPoint.y });
+      }
+    });
+    dragInitialEdgeControlsRef.current = edgeControlMap;
+
+    // Store target node initial canvas position for delta computation
+    dragInitialOffsetRef.current = { x: targetNode.x, y: targetNode.y };
 
     // If target is a container/group, locate all child nodes inside its bounds
     if (targetNode.type === 'container' || targetNode.type === 'group') {
-      const innerChildren = project.nodes.filter(
+      const innerChildren = proj.nodes.filter(
         (n) =>
           n.id !== targetNode.id &&
           n.x >= targetNode.x &&
@@ -568,20 +613,23 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       const canvasPos = screenToCanvas(e.clientX, e.clientY);
 
-      // Broadcast local cursor position to remote peers
-      collabEngine.setLocalCursor(canvasPos.x, canvasPos.y, selectedId);
+      // Broadcast local cursor position to remote peers (throttled — skip during active node drag)
+      if (!draggingNodeId) {
+        collabEngine.setLocalCursor(canvasPos.x, canvasPos.y, selectedId);
+      }
 
       // Dragging Edge Waypoint / Connector Bending
       if (draggingWaypoint) {
         const snappedX = snap(canvasPos.x);
         const snappedY = snap(canvasPos.y);
-        const updatedEdges = project.edges.map((edge) =>
+        const proj = projectRef.current;
+        const updatedEdges = proj.edges.map((edge) =>
           edge.id === draggingWaypoint.edgeId
             ? { ...edge, controlPoint: { x: snappedX, y: snappedY } }
             : edge
         );
         const liveUpdate = onUpdateProjectLive || onUpdateProject;
-        liveUpdate({ ...project, edges: updatedEdges });
+        liveUpdate({ ...proj, edges: updatedEdges });
         return;
       }
 
@@ -596,177 +644,157 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         }
       }
 
-      // Node Dragging
+      // Node Dragging — uses position maps (no stale closure, no snapshot drift)
       if (draggingNodeId) {
-        const snapshot = dragSnapshotRef.current;
-        const initialTargetNode =
-          snapshot?.nodes.find((n) => n.id === draggingNodeId) ||
-          project.nodes.find((n) => n.id === draggingNodeId);
+        const proj = projectRef.current;
+        const initialPos = dragInitialPositionsRef.current.get(draggingNodeId);
+        if (!initialPos) return;
 
-        if (initialTargetNode) {
-          const rawX = canvasPos.x - dragOffset.x;
-          const rawY = canvasPos.y - dragOffset.y;
-          const width = initialTargetNode.width;
-          const height = initialTargetNode.height;
+        const rawX = canvasPos.x - dragOffset.x;
+        const rawY = canvasPos.y - dragOffset.y;
 
-          let snappedX = rawX;
-          let snappedY = rawY;
-          const guides: AlignmentGuide[] = [];
+        // Use the dragged node's current width/height from live project for snap calc
+        const draggedNode = proj.nodes.find((n) => n.id === draggingNodeId);
+        const width = draggedNode?.width ?? 160;
+        const height = draggedNode?.height ?? 96;
 
-          // Group dragging: If dragging a node in selectedIds, move all selected nodes together!
-          const activeSelectedIds = selectedIdsRef.current.includes(draggingNodeId)
-            ? selectedIdsRef.current
-            : [draggingNodeId];
-          const selectedSet = new Set(activeSelectedIds);
+        let snappedX = rawX;
+        let snappedY = rawY;
+        const guides: AlignmentGuide[] = [];
 
-          // If dragging a container, also include its contained child nodes
-          const baseProject = snapshot || project;
-          baseProject.nodes.forEach((node) => {
-            if (selectedSet.has(node.id) && (node.type === 'container' || node.type === 'group')) {
-              baseProject.nodes.forEach((child) => {
-                if (
-                  child.id !== node.id &&
-                  child.x >= node.x &&
-                  child.y >= node.y &&
-                  child.x + child.width <= node.x + node.width &&
-                  child.y + child.height <= node.y + node.height
-                ) {
-                  selectedSet.add(child.id);
-                }
+        // Use Set from ref — O(1) lookups
+        const selectedSet = selectedSetRef.current;
+        const activeSet = selectedSet.has(draggingNodeId) ? selectedSet : new Set([draggingNodeId]);
+
+        // Alignment guides test against nodes outside the selected group
+        const otherNodes = proj.nodes.filter((n) => !activeSet.has(n.id));
+        const SNAP_THRESHOLD = 8;
+
+        let snappedH = false;
+        let snappedV = false;
+
+        for (const other of otherNodes) {
+          const otherMidX = other.x + other.width / 2;
+          const otherRight = other.x + other.width;
+          const otherMidY = other.y + other.height / 2;
+          const otherBottom = other.y + other.height;
+
+          const currMidX = rawX + width / 2;
+          const currRight = rawX + width;
+          const currMidY = rawY + height / 2;
+          const currBottom = rawY + height;
+
+          // X-Axis Alignments (Vertical Guides)
+          if (!snappedV) {
+            if (Math.abs(currMidX - otherMidX) < SNAP_THRESHOLD) {
+              snappedX = otherMidX - width / 2;
+              snappedV = true;
+              guides.push({
+                type: 'vertical',
+                pos: otherMidX,
+                start: Math.min(rawY, other.y) - 40,
+                end: Math.max(rawY + height, otherBottom) + 40
               });
-            }
-          });
-
-          // Snapping guides test against nodes outside the selected group
-          const otherNodes = baseProject.nodes.filter((n) => !selectedSet.has(n.id));
-          const SNAP_THRESHOLD = 8;
-
-          let snappedH = false;
-          let snappedV = false;
-
-          for (const other of otherNodes) {
-            const otherMidX = other.x + other.width / 2;
-            const otherRight = other.x + other.width;
-            const otherMidY = other.y + other.height / 2;
-            const otherBottom = other.y + other.height;
-
-            const currMidX = rawX + width / 2;
-            const currRight = rawX + width;
-            const currMidY = rawY + height / 2;
-            const currBottom = rawY + height;
-
-            // X-Axis Alignments (Vertical Guides)
-            if (!snappedV) {
-              if (Math.abs(currMidX - otherMidX) < SNAP_THRESHOLD) {
-                snappedX = otherMidX - width / 2;
-                snappedV = true;
-                guides.push({
-                  type: 'vertical',
-                  pos: otherMidX,
-                  start: Math.min(rawY, other.y) - 40,
-                  end: Math.max(rawY + height, otherBottom) + 40
-                });
-              } else if (Math.abs(rawX - other.x) < SNAP_THRESHOLD) {
-                snappedX = other.x;
-                snappedV = true;
-                guides.push({
-                  type: 'vertical',
-                  pos: other.x,
-                  start: Math.min(rawY, other.y) - 40,
-                  end: Math.max(rawY + height, otherBottom) + 40
-                });
-              } else if (Math.abs(currRight - otherRight) < SNAP_THRESHOLD) {
-                snappedX = otherRight - width;
-                snappedV = true;
-                guides.push({
-                  type: 'vertical',
-                  pos: otherRight,
-                  start: Math.min(rawY, other.y) - 40,
-                  end: Math.max(rawY + height, otherBottom) + 40
-                });
-              }
-            }
-
-            // Y-Axis Alignments (Horizontal Guides)
-            if (!snappedH) {
-              if (Math.abs(currMidY - otherMidY) < SNAP_THRESHOLD) {
-                snappedY = otherMidY - height / 2;
-                snappedH = true;
-                guides.push({
-                  type: 'horizontal',
-                  pos: otherMidY,
-                  start: Math.min(rawX, other.x) - 40,
-                  end: Math.max(rawX + width, otherRight) + 40
-                });
-              } else if (Math.abs(rawY - other.y) < SNAP_THRESHOLD) {
-                snappedY = other.y;
-                snappedH = true;
-                guides.push({
-                  type: 'horizontal',
-                  pos: other.y,
-                  start: Math.min(rawX, other.x) - 40,
-                  end: Math.max(rawX + width, otherRight) + 40
-                });
-              } else if (Math.abs(currBottom - otherBottom) < SNAP_THRESHOLD) {
-                snappedY = otherBottom - height;
-                snappedH = true;
-                guides.push({
-                  type: 'horizontal',
-                  pos: otherBottom,
-                  start: Math.min(rawX, other.x) - 40,
-                  end: Math.max(rawX + width, otherRight) + 40
-                });
-              }
+            } else if (Math.abs(rawX - other.x) < SNAP_THRESHOLD) {
+              snappedX = other.x;
+              snappedV = true;
+              guides.push({
+                type: 'vertical',
+                pos: other.x,
+                start: Math.min(rawY, other.y) - 40,
+                end: Math.max(rawY + height, otherBottom) + 40
+              });
+            } else if (Math.abs(currRight - otherRight) < SNAP_THRESHOLD) {
+              snappedX = otherRight - width;
+              snappedV = true;
+              guides.push({
+                type: 'vertical',
+                pos: otherRight,
+                start: Math.min(rawY, other.y) - 40,
+                end: Math.max(rawY + height, otherBottom) + 40
+              });
             }
           }
 
-          const finalX = snappedV ? Math.round(snappedX) : snap(snappedX);
-          const finalY = snappedH ? Math.round(snappedY) : snap(snappedY);
-
-          setAlignmentGuides(guides);
-
-          const deltaX = finalX - initialTargetNode.x;
-          const deltaY = finalY - initialTargetNode.y;
-
-          const liveUpdate = onUpdateProjectLive || onUpdateProject;
-
-          const updatedNodes = baseProject.nodes.map((node) => {
-            if (selectedSet.has(node.id) && !node.isLocked) {
-              return { ...node, x: node.x + deltaX, y: node.y + deltaY };
+          // Y-Axis Alignments (Horizontal Guides)
+          if (!snappedH) {
+            if (Math.abs(currMidY - otherMidY) < SNAP_THRESHOLD) {
+              snappedY = otherMidY - height / 2;
+              snappedH = true;
+              guides.push({
+                type: 'horizontal',
+                pos: otherMidY,
+                start: Math.min(rawX, other.x) - 40,
+                end: Math.max(rawX + width, otherRight) + 40
+              });
+            } else if (Math.abs(rawY - other.y) < SNAP_THRESHOLD) {
+              snappedY = other.y;
+              snappedH = true;
+              guides.push({
+                type: 'horizontal',
+                pos: other.y,
+                start: Math.min(rawX, other.x) - 40,
+                end: Math.max(rawX + width, otherRight) + 40
+              });
+            } else if (Math.abs(currBottom - otherBottom) < SNAP_THRESHOLD) {
+              snappedY = otherBottom - height;
+              snappedH = true;
+              guides.push({
+                type: 'horizontal',
+                pos: otherBottom,
+                start: Math.min(rawX, other.x) - 40,
+                end: Math.max(rawX + width, otherRight) + 40
+              });
             }
-            return node;
-          });
-
-          const updatedEdges = baseProject.edges.map((edge) => {
-            if (
-              edge.controlPoint &&
-              selectedSet.has(edge.fromNodeId) &&
-              selectedSet.has(edge.toNodeId)
-            ) {
-              return {
-                ...edge,
-                controlPoint: {
-                  x: edge.controlPoint.x + deltaX,
-                  y: edge.controlPoint.y + deltaY
-                }
-              };
-            }
-            return edge;
-          });
-
-          liveUpdate({ ...baseProject, nodes: updatedNodes, edges: updatedEdges });
+          }
         }
+
+        const finalX = snappedV ? Math.round(snappedX) : snap(snappedX);
+        const finalY = snappedH ? Math.round(snappedY) : snap(snappedY);
+
+        setAlignmentGuides(guides);
+
+        // Delta from initial position (no drift — always computed from snapshot)
+        const deltaX = finalX - initialPos.x;
+        const deltaY = finalY - initialPos.y;
+
+        // Zero-delta guard: skip map+setState entirely when mouse hasn't crossed a grid boundary
+        if (deltaX === 0 && deltaY === 0) return;
+
+        const liveUpdate = onUpdateProjectLive || onUpdateProject;
+
+        const updatedNodes = proj.nodes.map((node) => {
+          const initPos = dragInitialPositionsRef.current.get(node.id);
+          if (initPos && !node.isLocked) {
+            return { ...node, x: initPos.x + deltaX, y: initPos.y + deltaY };
+          }
+          return node;
+        });
+
+        const updatedEdges = proj.edges.map((edge) => {
+          const initCP = dragInitialEdgeControlsRef.current.get(edge.id);
+          if (initCP) {
+            return {
+              ...edge,
+              controlPoint: { x: initCP.x + deltaX, y: initCP.y + deltaY }
+            };
+          }
+          return edge;
+        });
+
+        liveUpdate({ ...proj, nodes: updatedNodes, edges: updatedEdges });
       }
 
       if (draggingSectionId) {
+        const proj = projectRef.current;
         const newX = snap(canvasPos.x - dragOffset.x);
         const newY = snap(canvasPos.y - dragOffset.y);
 
-        const updatedSections = project.sections.map((section) =>
+        const updatedSections = proj.sections.map((section) =>
           section.id === draggingSectionId ? { ...section, x: newX, y: newY } : section
         );
         const liveUpdate = onUpdateProjectLive || onUpdateProject;
-        liveUpdate({ ...project, sections: updatedSections });
+        liveUpdate({ ...proj, sections: updatedSections });
       }
 
       if (connecting) {
@@ -775,7 +803,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         let foundMagnet: MagnetType | null = null;
         let minMagDist = 28; // 28px magnetic snap radius
 
-        for (const node of project.nodes) {
+        for (const node of projectRef.current.nodes) {
           if (node.id === connecting.fromNodeId) continue;
           if (node.type === 'container' || node.type === 'group') continue; // Never snap to container/group
           const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
@@ -805,11 +833,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         let foundMagnet: MagnetType | null = null;
         let minMagDist = 32;
 
-        const currentEdge = project.edges.find((e) => e.id === draggingEdgeEndpoint.edgeId);
+        const currentEdge = projectRef.current.edges.find((e) => e.id === draggingEdgeEndpoint.edgeId);
         const prohibitedNodeId =
           draggingEdgeEndpoint.endpoint === 'source' ? currentEdge?.toNodeId : currentEdge?.fromNodeId;
 
-        for (const node of project.nodes) {
+        for (const node of projectRef.current.nodes) {
           if (node.id === prohibitedNodeId) continue;
           if (node.type === 'container' || node.type === 'group') continue; // Never snap to container/group
           const ports: PortPosition[] = ['top', 'right', 'bottom', 'left'];
@@ -847,16 +875,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       zoom,
       screenToCanvas,
       draggingNodeId,
-      selectedIds,
-      containerChildrenIds,
       draggingSectionId,
       dragOffset,
-      project,
       onUpdateProject,
       onUpdateProjectLive,
       connecting,
       draggingWaypoint,
-      draggingEdgeEndpoint
+      draggingEdgeEndpoint,
+      selectedId
     ]
   );
 
@@ -1181,16 +1207,30 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     onSelect(newNode.id, 'node');
   };
 
-  const handleUpdateNode = (updatedNode: FlowNodeType) => {
-    const updated = project.nodes.map((n) => (n.id === updatedNode.id ? updatedNode : n));
-    onUpdateProject({ ...project, nodes: updated });
-  };
+  const handleUpdateNode = useCallback((updatedNode: FlowNodeType) => {
+    const proj = projectRef.current;
+    const updated = proj.nodes.map((n) => (n.id === updatedNode.id ? updatedNode : n));
+    onUpdateProject({ ...proj, nodes: updated });
+  }, [onUpdateProject]);
 
-  const handleUpdateEdge = (updatedEdge: FlowEdgeType) => {
-    const updated = project.edges.map((e) => (e.id === updatedEdge.id ? updatedEdge : e));
-    onUpdateProject({ ...project, edges: updated });
-  };
+  const handleUpdateEdge = useCallback((updatedEdge: FlowEdgeType) => {
+    const proj = projectRef.current;
+    const updated = proj.edges.map((e) => (e.id === updatedEdge.id ? updatedEdge : e));
+    onUpdateProject({ ...proj, edges: updated });
+  }, [onUpdateProject]);
 
+  // Stable node-select handler — identity never changes, so FlowNodeMemo comparator stays effective
+  const handleNodeSelectStable = useCallback((nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasDraggedNodeRef.current) return;
+    const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+    const curSelected = selectedIdsRef.current || [];
+    if (curSelected.length > 1 && curSelected.includes(nodeId) && !isMulti) {
+      onSelect(nodeId, 'node', false);
+      return;
+    }
+    onSelect(nodeId, 'node', isMulti);
+  }, [onSelect]);
   const handleStartDragWaypoint = useCallback(
     (edgeId: string, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -1440,7 +1480,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
               dragEndpointPos?.edgeId === edge.id ? dragEndpointPos : null;
 
             return (
-              <FlowEdge
+              <FlowEdgeMemo
                 key={edge.id}
                 edge={edge}
                 sourceNode={sourceNode}
@@ -1456,9 +1496,10 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 onStartDragWaypoint={handleStartDragWaypoint}
                 onStartDragEndpoint={handleStartDragEndpoint}
                 onDelete={(edgeId) => {
+                  const proj = projectRef.current;
                   onUpdateProject({
-                    ...project,
-                    edges: project.edges.filter((e) => e.id !== edgeId)
+                    ...proj,
+                    edges: proj.edges.filter((e) => e.id !== edgeId)
                   });
                 }}
               />
@@ -1591,7 +1632,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
         {/* FLOW NODES LAYER */}
         {project.nodes.map((node) => (
-          <FlowNode
+          <FlowNodeMemo
             key={node.id}
             node={node}
             isSelected={
@@ -1606,17 +1647,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
               activeSimStep !== null &&
               project.edges[activeSimStep]?.toNodeId === node.id
             }
-            onSelect={(id, e) => {
-              e.stopPropagation();
-              if (hasDraggedNodeRef.current) return;
-              const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
-              const curSelected = selectedIdsRef.current || [];
-              if (curSelected.length > 1 && curSelected.includes(id) && !isMulti) {
-                onSelect(id, 'node', false);
-                return;
-              }
-              onSelect(id, 'node', isMulti);
-            }}
+            onSelect={handleNodeSelectStable}
             onDragStart={handleNodeDragStart}
             onResizeStart={handleResizeStart}
             onStartConnect={handleStartConnect}

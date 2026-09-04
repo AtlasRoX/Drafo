@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { FlowEdge as FlowEdgeType, FlowNode } from '../../types/flow';
 import { calculateEdgePath } from '../../utils/routing';
 
@@ -364,3 +364,33 @@ export const FlowEdgeHandles: React.FC<FlowEdgeHandlesProps> = ({
     </g>
   );
 };
+
+function flowEdgeAreEqual(prev: FlowEdgeProps, next: FlowEdgeProps): boolean {
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.isSimActive !== next.isSimActive) return false;
+  if (prev.dragEndpointPos !== next.dragEndpointPos) return false;
+  // Source/target node position or size changes require re-render (path recalculation)
+  const sA = prev.sourceNode, sB = next.sourceNode;
+  const tA = prev.targetNode, tB = next.targetNode;
+  if (sA.x !== sB.x || sA.y !== sB.y || sA.width !== sB.width || sA.height !== sB.height) return false;
+  if (tA.x !== tB.x || tA.y !== tB.y || tA.width !== tB.width || tA.height !== tB.height) return false;
+  // Edge data changes
+  const a = prev.edge, b = next.edge;
+  return (
+    a.id === b.id &&
+    a.fromPort === b.fromPort &&
+    a.toPort === b.toPort &&
+    a.label === b.label &&
+    a.color === b.color &&
+    a.width === b.width &&
+    a.lineStyle === b.lineStyle &&
+    a.routeType === b.routeType &&
+    a.arrowhead === b.arrowhead &&
+    a.bidirectional === b.bidirectional &&
+    a.isAnimated === b.isAnimated &&
+    a.controlPoint?.x === b.controlPoint?.x &&
+    a.controlPoint?.y === b.controlPoint?.y
+  );
+}
+
+export const FlowEdgeMemo = memo(FlowEdge, flowEdgeAreEqual);
