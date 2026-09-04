@@ -279,58 +279,60 @@ export const FlowEdge: React.FC<FlowEdgeProps> = ({
 
           {/* Quick Floating Action Controls when Edge is Selected */}
           {isSelected && !isEditingLabel && (
-            <foreignObject x={-100} y={28} width={200} height={34} className="drafo-edge-action-pill">
-              <div className="drafo-edge-actions" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  className="drafo-edge-action-btn"
-                  onClick={handleCycleRoute}
-                  title={`Route: ${edge.routeType || 'curved'} (Click to cycle)`}
-                >
-                  {edge.routeType === 'orthogonal' ? 'Elbow' : edge.routeType === 'straight' ? 'Direct' : 'Curve'}
-                </button>
-                <button
-                  type="button"
-                  className="drafo-edge-action-btn"
-                  onClick={handleCycleStyle}
-                  title={`Style: ${edge.lineStyle || 'solid'} (Click to cycle)`}
-                >
-                  {edge.lineStyle === 'dashed' ? 'Dashed' : edge.lineStyle === 'dotted' ? 'Dotted' : 'Solid'}
-                </button>
-                <button
-                  type="button"
-                  className={`drafo-edge-action-btn ${edge.isAnimated ? 'active' : ''}`}
-                  onClick={handleToggleAnimated}
-                  title="Toggle animation pulse"
-                >
-                  <Zap size={11} color={edge.isAnimated ? '#2563EB' : '#64748B'} />
-                </button>
-                <button
-                  type="button"
-                  className="drafo-edge-action-btn"
-                  onClick={handleSwapDirection}
-                  title="Reverse line direction"
-                >
-                  <ArrowLeftRight size={11} />
-                </button>
-                {edge.controlPoint && (
+            <foreignObject x={-170} y={26} width={340} height={44} className="drafo-edge-action-pill">
+              <div className="drafo-edge-actions-wrapper">
+                <div className="drafo-edge-actions" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="drafo-edge-action-btn reset"
-                    onClick={handleResetCurve}
-                    title="Reset bend to auto"
+                    className="drafo-edge-action-btn"
+                    onClick={handleCycleRoute}
+                    title={`Route: ${edge.routeType || 'curved'} (Click to cycle)`}
                   >
-                    <RotateCcw size={11} />
+                    {edge.routeType === 'orthogonal' ? 'Elbow' : edge.routeType === 'straight' ? 'Direct' : 'Curve'}
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="drafo-edge-action-btn delete"
-                  onClick={handleDelete}
-                  title="Delete connector"
-                >
-                  <Trash2 size={11} />
-                </button>
+                  <button
+                    type="button"
+                    className="drafo-edge-action-btn"
+                    onClick={handleCycleStyle}
+                    title={`Style: ${edge.lineStyle || 'solid'} (Click to cycle)`}
+                  >
+                    {edge.lineStyle === 'dashed' ? 'Dashed' : edge.lineStyle === 'dotted' ? 'Dotted' : 'Solid'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-edge-action-btn ${edge.isAnimated ? 'active' : ''}`}
+                    onClick={handleToggleAnimated}
+                    title="Toggle animation pulse"
+                  >
+                    <Zap size={11} color={edge.isAnimated ? '#2563EB' : '#64748B'} />
+                  </button>
+                  <button
+                    type="button"
+                    className="drafo-edge-action-btn"
+                    onClick={handleSwapDirection}
+                    title="Reverse line direction"
+                  >
+                    <ArrowLeftRight size={11} />
+                  </button>
+                  {edge.controlPoint && (
+                    <button
+                      type="button"
+                      className="drafo-edge-action-btn reset"
+                      onClick={handleResetCurve}
+                      title="Reset bend to auto"
+                    >
+                      <RotateCcw size={11} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="drafo-edge-action-btn delete"
+                    onClick={handleDelete}
+                    title="Delete connector"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </div>
               </div>
             </foreignObject>
           )}
