@@ -201,7 +201,12 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const draggingWaypointRef = useRef(draggingWaypoint);
   draggingWaypointRef.current = draggingWaypoint;
 
-  // Track space key for panning, V/H for tool mode, M for mini-map
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+  const hasDraggedNodeRef = useRef(false);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Track space key for panning, V/H for tool mode, M for mini-map, Ctrl+A for select all
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
@@ -216,6 +221,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       if (e.code === 'Space') {
         setIsSpacePressed(true);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        const allIds = project.nodes.map((n) => n.id);
+        if (onSelectMultiple) {
+          onSelectMultiple(allIds);
+        } else if (allIds.length > 0) {
+          onSelect(allIds[0], 'node');
+        }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setIsSearchOpen((prev) => {
@@ -353,8 +366,19 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     const targetNode = project.nodes.find((n) => n.id === nodeId);
     if (!targetNode || targetNode.isLocked) return;
 
+    hasDraggedNodeRef.current = false;
+    dragStartPosRef.current = { x: e.clientX, y: e.clientY };
+
     const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
-    onSelect(nodeId, 'node', isMulti);
+    const curSelected = selectedIdsRef.current || [];
+
+    if (!curSelected.includes(nodeId)) {
+      onSelect(nodeId, 'node', isMulti);
+    } else if (isMulti) {
+      onSelect(nodeId, 'node', true);
+      return;
+    }
+    // If nodeId is already in curSelected and !isMulti, keep current selection for group dragging
 
     dragSnapshotRef.current = JSON.parse(JSON.stringify(project));
 
@@ -561,35 +585,60 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         return;
       }
 
+      // Track drag movement distance to distinguish a click from a drag
+      if (dragStartPosRef.current) {
+        const dist = Math.hypot(
+          e.clientX - dragStartPosRef.current.x,
+          e.clientY - dragStartPosRef.current.y
+        );
+        if (dist > 3) {
+          hasDraggedNodeRef.current = true;
+        }
+      }
+
       // Node Dragging
       if (draggingNodeId) {
-        const targetNode = project.nodes.find((n) => n.id === draggingNodeId);
-        if (targetNode) {
+        const snapshot = dragSnapshotRef.current;
+        const initialTargetNode =
+          snapshot?.nodes.find((n) => n.id === draggingNodeId) ||
+          project.nodes.find((n) => n.id === draggingNodeId);
+
+        if (initialTargetNode) {
           const rawX = canvasPos.x - dragOffset.x;
           const rawY = canvasPos.y - dragOffset.y;
-          const width = targetNode.width;
-          const height = targetNode.height;
+          const width = initialTargetNode.width;
+          const height = initialTargetNode.height;
 
           let snappedX = rawX;
           let snappedY = rawY;
           const guides: AlignmentGuide[] = [];
 
           // Group dragging: If dragging a node in selectedIds, move all selected nodes together!
-          const activeSelectedIds = selectedIds.includes(draggingNodeId)
-            ? selectedIds
+          const activeSelectedIds = selectedIdsRef.current.includes(draggingNodeId)
+            ? selectedIdsRef.current
             : [draggingNodeId];
           const selectedSet = new Set(activeSelectedIds);
 
           // If dragging a container, also include its contained child nodes
-          if (
-            (targetNode.type === 'container' || targetNode.type === 'group') &&
-            containerChildrenIds.length > 0
-          ) {
-            containerChildrenIds.forEach((cId) => selectedSet.add(cId));
-          }
+          const baseProject = snapshot || project;
+          baseProject.nodes.forEach((node) => {
+            if (selectedSet.has(node.id) && (node.type === 'container' || node.type === 'group')) {
+              baseProject.nodes.forEach((child) => {
+                if (
+                  child.id !== node.id &&
+                  child.x >= node.x &&
+                  child.y >= node.y &&
+                  child.x + child.width <= node.x + node.width &&
+                  child.y + child.height <= node.y + node.height
+                ) {
+                  selectedSet.add(child.id);
+                }
+              });
+            }
+          });
 
           // Snapping guides test against nodes outside the selected group
-          const otherNodes = project.nodes.filter((n) => !selectedSet.has(n.id));
+          const otherNodes = baseProject.nodes.filter((n) => !selectedSet.has(n.id));
           const SNAP_THRESHOLD = 8;
 
           let snappedH = false;
@@ -676,20 +725,36 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
           setAlignmentGuides(guides);
 
-          const deltaX = finalX - targetNode.x;
-          const deltaY = finalY - targetNode.y;
+          const deltaX = finalX - initialTargetNode.x;
+          const deltaY = finalY - initialTargetNode.y;
 
           const liveUpdate = onUpdateProjectLive || onUpdateProject;
 
-          if (deltaX !== 0 || deltaY !== 0) {
-            const updatedNodes = project.nodes.map((node) => {
-              if (selectedSet.has(node.id)) {
-                return { ...node, x: node.x + deltaX, y: node.y + deltaY };
-              }
-              return node;
-            });
-            liveUpdate({ ...project, nodes: updatedNodes });
-          }
+          const updatedNodes = baseProject.nodes.map((node) => {
+            if (selectedSet.has(node.id) && !node.isLocked) {
+              return { ...node, x: node.x + deltaX, y: node.y + deltaY };
+            }
+            return node;
+          });
+
+          const updatedEdges = baseProject.edges.map((edge) => {
+            if (
+              edge.controlPoint &&
+              selectedSet.has(edge.fromNodeId) &&
+              selectedSet.has(edge.toNodeId)
+            ) {
+              return {
+                ...edge,
+                controlPoint: {
+                  x: edge.controlPoint.x + deltaX,
+                  y: edge.controlPoint.y + deltaY
+                }
+              };
+            }
+            return edge;
+          });
+
+          liveUpdate({ ...baseProject, nodes: updatedNodes, edges: updatedEdges });
         }
       }
 
@@ -804,6 +869,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       setDraggingSectionId(null);
       setAlignmentGuides([]);
 
+      setTimeout(() => {
+        hasDraggedNodeRef.current = false;
+        dragStartPosRef.current = null;
+      }, 50);
+
       if (resizing) {
         setResizing(null);
       }
@@ -905,15 +975,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
           if (intersecting.length > 0) {
             const foundIds = intersecting.map((n) => n.id);
+            const finalIds = e.shiftKey
+              ? Array.from(new Set([...(selectedIdsRef.current || []), ...foundIds]))
+              : foundIds;
             if (onSelectMultiple) {
-              onSelectMultiple(foundIds);
+              onSelectMultiple(finalIds);
             } else {
-              onSelect(foundIds[0], 'node', false);
+              onSelect(finalIds[0], 'node', false);
             }
-          } else {
+          } else if (!e.shiftKey) {
             onSelect(null, 'canvas');
           }
-        } else {
+        } else if (!e.shiftKey) {
           onSelect(null, 'canvas');
         }
         setSelectionBox(null);
@@ -1535,7 +1608,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             }
             onSelect={(id, e) => {
               e.stopPropagation();
+              if (hasDraggedNodeRef.current) return;
               const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+              const curSelected = selectedIdsRef.current || [];
+              if (curSelected.length > 1 && curSelected.includes(id) && !isMulti) {
+                onSelect(id, 'node', false);
+                return;
+              }
               onSelect(id, 'node', isMulti);
             }}
             onDragStart={handleNodeDragStart}

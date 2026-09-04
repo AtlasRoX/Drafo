@@ -161,6 +161,7 @@ export const App: React.FC = () => {
 
   // Clipboard for nodes
   const [copiedNode, setCopiedNode] = useState<FlowNodeType | null>(null);
+  const [copiedNodes, setCopiedNodes] = useState<FlowNodeType[]>([]);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
@@ -647,7 +648,10 @@ export const App: React.FC = () => {
           ...edge,
           id: `edge-${Date.now()}-${idx}`,
           fromNodeId: dupIdMap.get(edge.fromNodeId)!,
-          toNodeId: dupIdMap.get(edge.toNodeId)!
+          toNodeId: dupIdMap.get(edge.toNodeId)!,
+          controlPoint: edge.controlPoint
+            ? { x: edge.controlPoint.x + 30, y: edge.controlPoint.y + 30 }
+            : undefined
         });
       }
     });
@@ -980,24 +984,55 @@ export const App: React.FC = () => {
           handleGroupSelected();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        if (selectedType === 'node' && selectedId) {
-          const node = project.nodes.find((n) => n.id === selectedId);
-          if (node) setCopiedNode(node);
+        if (selectedType === 'node') {
+          const idsToCopy = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+          const nodes = project.nodes.filter((n) => idsToCopy.includes(n.id));
+          if (nodes.length > 0) {
+            setCopiedNodes(nodes);
+            setCopiedNode(nodes[0]);
+          }
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-        if (copiedNode) {
-          const pasted: FlowNodeType = {
-            ...copiedNode,
-            id: `node-${Date.now()}`,
-            x: copiedNode.x + 30,
-            y: copiedNode.y + 30
-          };
+        const nodesToPaste = copiedNodes.length > 0 ? copiedNodes : (copiedNode ? [copiedNode] : []);
+        if (nodesToPaste.length > 0) {
+          const idMap = new Map<string, string>();
+          const newNodes: FlowNodeType[] = [];
+          nodesToPaste.forEach((orig, idx) => {
+            const newId = `node-${Date.now()}-${idx}`;
+            idMap.set(orig.id, newId);
+            newNodes.push({
+              ...orig,
+              id: newId,
+              title: nodesToPaste.length === 1 ? `${orig.title} (Copy)` : orig.title,
+              x: orig.x + 30,
+              y: orig.y + 30
+            });
+          });
+
+          const newEdges: any[] = [];
+          project.edges.forEach((edge, idx) => {
+            if (idMap.has(edge.fromNodeId) && idMap.has(edge.toNodeId)) {
+              newEdges.push({
+                ...edge,
+                id: `edge-${Date.now()}-${idx}`,
+                fromNodeId: idMap.get(edge.fromNodeId)!,
+                toNodeId: idMap.get(edge.toNodeId)!,
+                controlPoint: edge.controlPoint
+                  ? { x: edge.controlPoint.x + 30, y: edge.controlPoint.y + 30 }
+                  : undefined
+              });
+            }
+          });
+
           updateProjectWithHistory({
             ...project,
-            nodes: [...project.nodes, pasted]
+            nodes: [...project.nodes, ...newNodes],
+            edges: [...project.edges, ...newEdges]
           });
-          setSelectedId(pasted.id);
-          setSelectedIds([pasted.id]);
+
+          const newIds = newNodes.map((n) => n.id);
+          setSelectedId(newIds[0]);
+          setSelectedIds(newIds);
           setSelectedType('node');
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
@@ -1040,10 +1075,26 @@ export const App: React.FC = () => {
             if (e.key === 'ArrowRight') dx = step;
 
             const updatedNodes = project.nodes.map((node) => {
-              if (!moveSet.has(node.id)) return node;
+              if (!moveSet.has(node.id) || node.isLocked) return node;
               return { ...node, x: node.x + dx, y: node.y + dy };
             });
-            updateProjectWithHistory({ ...project, nodes: updatedNodes });
+            const updatedEdges = project.edges.map((edge) => {
+              if (
+                edge.controlPoint &&
+                moveSet.has(edge.fromNodeId) &&
+                moveSet.has(edge.toNodeId)
+              ) {
+                return {
+                  ...edge,
+                  controlPoint: {
+                    x: edge.controlPoint.x + dx,
+                    y: edge.controlPoint.y + dy
+                  }
+                };
+              }
+              return edge;
+            });
+            updateProjectWithHistory({ ...project, nodes: updatedNodes, edges: updatedEdges });
             return;
           }
         }
@@ -1138,6 +1189,7 @@ export const App: React.FC = () => {
     handleUngroupSelected,
     handleAddNode,
     copiedNode,
+    copiedNodes,
     project,
     selectedId,
     selectedIds,
