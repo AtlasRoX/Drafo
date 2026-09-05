@@ -8,6 +8,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -15,13 +16,16 @@
    ========================================================================== */
 
 .drafo-dashboard-header {
-  height: 56px;
+  height: 60px;
+  min-height: 60px;
+  flex-shrink: 0;
+  box-sizing: border-box;
   background-color: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 28px;
   position: sticky;
   top: 0;
   z-index: 40;
@@ -47,13 +51,13 @@
 }
 
 .drafo-dash-search-input {
-  width: 240px;
-  height: 34px;
+  width: 250px;
+  height: 36px;
   padding: 0 30px 0 32px;
   background-color: #F1F5F9;
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 13.5px;
   color: #0F172A;
   outline: none;
   transition: all 0.15s ease;
@@ -89,14 +93,15 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 15px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .drafo-dash-btn.secondary {

@@ -63,8 +63,11 @@ CREATE TABLE IF NOT EXISTS edges (
   is_animated BOOLEAN DEFAULT FALSE,
   latency TEXT,
   control_point JSONB,
+  waypoints JSONB,
   PRIMARY KEY (id, project_id)
 );
+
+ALTER TABLE edges ADD COLUMN IF NOT EXISTS waypoints JSONB;
 
 CREATE TABLE IF NOT EXISTS sections (
   id TEXT NOT NULL,
@@ -281,8 +284,8 @@ async function saveProjectInternal(pg: PGlite, project: FlowProject): Promise<vo
       await tx.query(
         `INSERT INTO edges (
            id, project_id, from_node_id, to_node_id, from_port, to_port, label, step_number,
-           line_style, route_type, color, width, arrowhead, bidirectional, is_animated, latency, control_point
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);`,
+           line_style, route_type, color, width, arrowhead, bidirectional, is_animated, latency, control_point, waypoints
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18);`,
         [
           edge.id,
           project.id,
@@ -300,7 +303,8 @@ async function saveProjectInternal(pg: PGlite, project: FlowProject): Promise<vo
           edge.bidirectional || false,
           edge.isAnimated || false,
           edge.latency || null,
-          edge.controlPoint ? JSON.stringify(edge.controlPoint) : null
+          edge.controlPoint ? JSON.stringify(edge.controlPoint) : null,
+          edge.waypoints ? JSON.stringify(edge.waypoints) : null
         ]
       );
     }
@@ -443,6 +447,11 @@ export async function loadAllProjects(): Promise<FlowProject[]> {
           ? typeof e.control_point === 'string'
             ? JSON.parse(e.control_point)
             : e.control_point
+          : undefined,
+        waypoints: e.waypoints
+          ? typeof e.waypoints === 'string'
+            ? JSON.parse(e.waypoints)
+            : e.waypoints
           : undefined
       }));
 

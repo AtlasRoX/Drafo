@@ -2,6 +2,7 @@
 
 .drafo-navbar {
   height: 56px;
+  min-height: 56px;
   width: 100%;
   background-color: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
@@ -11,6 +12,7 @@
   padding: 0 16px;
   z-index: 50;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* Left Brand & Title Controls */
@@ -121,36 +123,56 @@
 }
 
 .drafo-nav-btn.ai-btn {
-  background: linear-gradient(135deg, #533bf5 0%, #8c3df5 100%);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: #FFFFFF;
   border: none;
   font-weight: 700;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .drafo-nav-btn.ai-btn:hover {
-  background: linear-gradient(135deg, #4830eb 0%, #8030eb 100%);
+  background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-0.5px);
 }
 
 .drafo-nav-btn.export-primary-btn {
-  width: 34px;
   height: 34px;
-  padding: 0;
+  padding: 0 12px;
   border-radius: 8px;
-  background-color: #2563EB;
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
   color: #FFFFFF;
-  border: 1px solid #1D4ED8;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  border: 1px solid #4338CA;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 13px;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.drafo-nav-btn.export-primary-btn:hover,
-.drafo-nav-btn.export-primary-btn.is-active {
-  background-color: #1D4ED8;
-  border-color: #1E40AF;
+.drafo-nav-btn.export-primary-btn:hover {
+  background: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+  transform: translateY(-1px);
+}
+
+.drafo-nav-btn.export-primary-btn:active {
+  transform: translateY(0);
+}
+
+.drafo-nav-btn.export-primary-btn .drafo-btn-badge {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Export Dropdown Menu */

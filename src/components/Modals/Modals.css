@@ -7,8 +7,9 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(6px);
+  background-color: rgba(15, 23, 42, 0.48);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,6 +36,9 @@
   animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 10000;
+  font-family: 'Google Sans', 'Product Sans', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .drafo-modal-container.drafo-collab-modal {
@@ -369,8 +373,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -477,9 +482,10 @@
 
 /* --- Visual Export Studio Modal Styles --- */
 .drafo-modal-container.visual-export-modal {
-  max-width: 960px;
-  width: 95%;
-  max-height: 90vh;
+  max-width: 1320px;
+  width: 95vw;
+  height: 88vh;
+  max-height: 880px;
   display: flex;
   flex-direction: column;
 }
@@ -488,14 +494,14 @@
   display: flex;
   gap: 8px;
   border-bottom: 1px solid #E2E8F0;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 
 .drafo-tab-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
@@ -519,19 +525,21 @@
 
 .drafo-export-body {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 20px;
-  min-height: 380px;
+  grid-template-columns: 310px 1fr;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  padding-top: 12px;
 }
 
 .drafo-export-controls {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   overflow-y: auto;
-  padding-right: 6px;
-  max-height: 480px;
+  padding-right: 8px;
+  height: 100%;
 }
 
 .drafo-export-control-group {
@@ -677,38 +685,264 @@
 .drafo-export-preview-container {
   display: flex;
   flex-direction: column;
-  background-color: #0B0F19;
+  background-color: #FAFAFC;
   border-radius: 12px;
-  border: 1px solid #1E293B;
+  border: 1px solid #E2E8F0;
   overflow: hidden;
-  min-height: 380px;
+  height: 100%;
+  min-height: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.drafo-export-preview-container.theme-dark {
+  background-color: #0F172A;
+  border-color: #1E293B;
 }
 
 .drafo-preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background-color: #111827;
-  border-bottom: 1px solid #1F2937;
-  font-size: 12px;
-  font-weight: 600;
-  color: #9CA3AF;
+  padding: 8px 16px;
+  min-height: 48px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+  gap: 12px;
 }
 
-.drafo-preview-meta {
+.drafo-export-preview-container.theme-dark .drafo-preview-header {
+  background-color: #0F172A;
+  border-bottom-color: #1E293B;
+}
+
+/* Left Group */
+.drafo-preview-left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.drafo-preview-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-title {
+  color: #F8FAFC;
+}
+
+.drafo-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 11px;
-  color: #6B7280;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94A3B8;
+}
+
+.drafo-preview-dim {
+  font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, monospace);
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-dim {
+  color: #F1F5F9;
+}
+
+.drafo-preview-tag {
+  background: #EEF2FF;
+  color: #4F46E5;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-tag {
+  background: rgba(99, 102, 241, 0.2);
+  color: #A5B4FC;
+}
+
+.drafo-preview-sep {
+  color: #CBD5E1;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-sep {
+  color: #475569;
+}
+
+.drafo-preview-count {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-preview-count {
+  color: #94A3B8;
+}
+
+/* Right Group: Toolbar Controls */
+.drafo-preview-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Unified Segmented Controls */
+.drafo-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 2.5px;
+  gap: 2px;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-segmented-control {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.drafo-segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 10px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  white-space: nowrap !important;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.drafo-segmented-btn:hover:not(.active) {
+  color: #0F172A;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.drafo-export-preview-container.theme-dark .drafo-segmented-btn:hover:not(.active) {
+  color: #F1F5F9;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.drafo-segmented-btn.active {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.drafo-export-preview-container.theme-dark .drafo-segmented-btn.active {
+  background-color: #1E293B;
+  color: #F8FAFC;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.drafo-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background-color: #E2E8F0;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-toolbar-divider {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.drafo-zoom-icon-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-zoom-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0F172A;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-zoom-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+.drafo-zoom-label-btn {
+  height: 26px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  white-space: nowrap !important;
+  transition: all 0.15s ease;
+}
+
+.drafo-zoom-label-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0F172A;
+}
+
+.drafo-export-preview-container.theme-dark .drafo-zoom-label-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+.drafo-zoom-label-btn.active {
+  background-color: #FFFFFF;
+  color: #4F46E5;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.drafo-export-preview-container.theme-dark .drafo-zoom-label-btn.active {
+  background-color: #1E293B;
+  color: #818CF8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .drafo-preview-viewport {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  overflow: auto;
-  max-height: 440px;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  cursor: default;
 }
 
 .drafo-preview-card {
@@ -718,6 +952,38 @@
 
 .drafo-preview-card.has-shadow {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+}
+
+.drafo-crop-badge {
+  transition: background-color 0.15s ease;
+}
+
+.drafo-crop-badge:hover {
+  background-color: #4338CA !important;
+}
+
+.drafo-stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+}
+
+.drafo-stat-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.drafo-stat-lbl {
+  font-size: 11px;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 /* Code Output Tab */

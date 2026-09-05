@@ -1,29 +1,26 @@
-'use client';
-
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { DrafoLogo } from '../../assets/DrafoLogo';
 import {
   Download,
-  Copy,
   Wand2,
-  Bookmark,
-  FileCode,
-  Image as ImageIcon,
-  Check,
   ArrowLeft,
   Keyboard,
-  Sparkles,
-  Users
+  Users,
+  Code2,
+  Link2,
+  Check
 } from 'lucide-react';
 import { collabEngine, PeerPresence } from '../../crdt/yjsProvider';
 import './Navbar.css';
 
 interface NavbarProps {
+  projectId?: string;
   projectName: string;
   onUpdateProjectName: (name: string) => void;
   onBackToDashboard?: () => void;
-  onOpenTemplates: () => void;
+  onOpenTemplates?: () => void;
   onOpenAIGenerator: () => void;
+  onOpenImportVisualize?: () => void;
   onOpenShortcuts?: () => void;
   onOpenExportStudio?: () => void;
   onOpenCollaboration?: () => void;
@@ -35,11 +32,13 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  projectId,
   projectName,
   onUpdateProjectName,
   onBackToDashboard,
   onOpenTemplates,
   onOpenAIGenerator,
+  onOpenImportVisualize,
   onOpenShortcuts,
   onOpenExportStudio,
   onOpenCollaboration,
@@ -52,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [peers, setPeers] = useState<PeerPresence[]>(() => collabEngine.getRemotePeers());
   const [currentRoom, setCurrentRoom] = useState<string | null>(() => collabEngine.getRoomId());
   const [localUser, setLocalUser] = useState(() => collabEngine.getLocalUserProfile());
+  const [copiedProjectLink, setCopiedProjectLink] = useState(false);
 
   React.useEffect(() => {
     const unsub = collabEngine.onPeersChange((newPeers) => {
@@ -63,21 +63,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(projectName);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [copiedNotification, setCopiedNotification] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    if (!showExportMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setShowExportMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showExportMenu]);
+  const handleCopyProjectLink = () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = `${window.location.origin}/studio?id=${projectId || ''}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopiedProjectLink(true);
+      setTimeout(() => setCopiedProjectLink(false), 2400);
+    });
+  };
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -85,21 +79,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       onUpdateProjectName(tempTitle.trim());
     } else {
       setTempTitle(projectName);
-    }
-  };
-
-  const handleCopy = () => {
-    onCopyClipboard();
-    setCopiedNotification(true);
-    setShowExportMenu(false);
-    setTimeout(() => setCopiedNotification(false), 2000);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onImportJson(file);
-      setShowExportMenu(false);
     }
   };
 
@@ -117,7 +96,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        <DrafoLogo size={28} showWordmark={true} />
+        {onBackToDashboard ? (
+          <button
+            type="button"
+            onClick={onBackToDashboard}
+            title="Back to Dashboard"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            <DrafoLogo size={28} showWordmark={true} />
+          </button>
+        ) : (
+          <a href="/studio" title="Back to Dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <DrafoLogo size={28} showWordmark={true} />
+          </a>
+        )}
 
         <div className="drafo-title-editor">
           {isEditingTitle ? (
@@ -155,18 +147,49 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        <button
-          className="drafo-nav-btn icon-only-btn"
-          onClick={onOpenTemplates}
-          title="Architecture Presets & Templates"
-          aria-label="Presets"
-        >
-          <Bookmark size={17} />
-        </button>
-
         <button className="drafo-nav-btn ai-btn" onClick={onOpenAIGenerator}>
           <Wand2 size={15} />
           <span>AI Flow</span>
+        </button>
+
+        {onOpenImportVisualize && (
+          <button
+            className="drafo-nav-btn import-btn"
+            onClick={onOpenImportVisualize}
+            title="Import & Visualize Code/Schemas (Mermaid, UML, SQL, JSON, Types)"
+            style={{
+              background: 'linear-gradient(135deg, #EEF2FF, #F5F3FF)',
+              borderColor: '#C7D2FE',
+              color: '#4F46E5',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            <Code2 size={15} />
+            <span>Import</span>
+          </button>
+        )}
+
+        {/* Unique Shareable Project Link Button (32-digit Unique URL) */}
+        <button
+          className={`drafo-nav-btn drafo-nav-share-link-btn ${copiedProjectLink ? 'copied' : ''}`}
+          onClick={handleCopyProjectLink}
+          title={`Copy unique 32-digit project link (${projectId || ''})`}
+          style={{
+            background: copiedProjectLink ? '#ECFDF5' : '#F8FAFC',
+            borderColor: copiedProjectLink ? '#A7F3D0' : '#E2E8F0',
+            color: copiedProjectLink ? '#059669' : '#334155',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.18s ease'
+          }}
+        >
+          {copiedProjectLink ? <Check size={14} color="#059669" /> : <Link2 size={14} />}
+          <span>{copiedProjectLink ? 'Link Copied!' : 'Copy Link'}</span>
         </button>
 
         {/* Live P2P Collaboration, Avatars & Share Button */}
@@ -221,132 +244,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
 
-        {/* Export Dropdown */}
-        <div className="drafo-export-dropdown-wrapper" ref={exportMenuRef}>
-          <button
-            className={`drafo-nav-btn export-primary-btn ${showExportMenu ? 'is-active' : ''}`}
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            title="Export Diagram"
-            aria-label="Export Diagram"
-          >
-            <Download size={16} />
-          </button>
-
-          {showExportMenu && (
-            <div className="drafo-export-menu">
-              {onOpenExportStudio && (
-                <>
-                  <button
-                    className="drafo-menu-item featured"
-                    onClick={() => {
-                      onOpenExportStudio();
-                      setShowExportMenu(false);
-                    }}
-                    style={{ backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: '8px' }}
-                  >
-                    <Sparkles size={16} color="#7C3AED" />
-                    <div className="drafo-menu-item-info">
-                      <span className="menu-title" style={{ color: '#6D28D9', fontWeight: 700 }}>
-                        Visual Export Studio...
-                      </span>
-                      <span className="menu-sub">Custom background, snippet & SVG (Ctrl+E)</span>
-                    </div>
-                  </button>
-                  <div className="drafo-menu-divider" />
-                </>
-              )}
-
-              <button
-                className="drafo-menu-item"
-                onClick={() => {
-                  onExportPng(2);
-                  setShowExportMenu(false);
-                }}
-              >
-                <ImageIcon size={16} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">PNG Image (High-Res 2x)</span>
-                  <span className="menu-sub">Best for slides & sharing</span>
-                </div>
-              </button>
-
-              <button
-                className="drafo-menu-item"
-                onClick={() => {
-                  onExportPng(4);
-                  setShowExportMenu(false);
-                }}
-              >
-                <ImageIcon size={16} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">Ultra HD PNG (4x Print)</span>
-                  <span className="menu-sub">Sharp lossless vector raster</span>
-                </div>
-              </button>
-
-              <button
-                className="drafo-menu-item"
-                onClick={() => {
-                  onExportSvg();
-                  setShowExportMenu(false);
-                }}
-              >
-                <FileCode size={16} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">Export Clean SVG</span>
-                  <span className="menu-sub">Vector graphics format</span>
-                </div>
-              </button>
-
-              <div className="drafo-menu-divider" />
-
-              <button className="drafo-menu-item" onClick={handleCopy}>
-                <Copy size={16} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">Copy to Clipboard</span>
-                  <span className="menu-sub">Instant paste anywhere</span>
-                </div>
-              </button>
-
-              <button
-                className="drafo-menu-item"
-                onClick={() => {
-                  onExportJson();
-                  setShowExportMenu(false);
-                }}
-              >
-                <Download size={16} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">Save .drafo File</span>
-                  <span className="menu-sub">JSON project backup</span>
-                </div>
-              </button>
-
-              <label className="drafo-menu-item cursor-pointer">
-                <Download size={16} style={{ transform: 'rotate(180deg)' }} />
-                <div className="drafo-menu-item-info">
-                  <span className="menu-title">Open .drafo Project</span>
-                  <span className="menu-sub">Load a saved diagram file</span>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json,.drafo"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* Copied Toast */}
-        {copiedNotification && (
-          <div className="drafo-toast">
-            <Check size={14} />
-            <span>Copied diagram to clipboard!</span>
-          </div>
-        )}
+        {/* Unified Visual Export Studio Button */}
+        <button
+          className="drafo-nav-btn export-primary-btn"
+          onClick={() => {
+            if (onOpenExportStudio) {
+              onOpenExportStudio();
+            } else {
+              onExportPng(2);
+            }
+          }}
+          title="Visual Export Studio (Ctrl+E)"
+          aria-label="Visual Export Studio"
+        >
+          <Download size={15} />
+          <span>Export</span>
+          <span className="drafo-btn-badge">Ctrl+E</span>
+        </button>
       </div>
     </header>
   );

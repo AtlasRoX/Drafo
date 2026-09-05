@@ -18,9 +18,9 @@ export const DrafoLogo: React.FC<DrafoLogoProps> = ({
   theme = 'light',
   onClick
 }) => {
-  // logo.svg has a natural aspect ratio of 1500 / 450 (~3.33)
+  // logo.svg has a natural aspect ratio of 1370 / 450 (~3.044)
   const height = size;
-  const width = showWordmark ? Math.round(size * 3.33) : size;
+  const width = showWordmark ? Math.round(size * 3.044) : size;
 
   return (
     <div

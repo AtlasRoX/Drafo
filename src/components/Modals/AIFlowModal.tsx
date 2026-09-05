@@ -18,9 +18,9 @@ export const AIFlowModal: React.FC<AIFlowModalProps> = ({ onFlowGenerated, onClo
   const [language, setLanguage] = useState<'en' | 'bn'>('en');
 
   const steps = [
-    'Synthesizing architecture nodes & zones...',
-    'Resolving port connections & step hierarchy...',
-    'Applying curated color themes & styles...'
+    '🧠 Thinking what to make based on your requirements...',
+    '🔍 Analyzing architecture, protocols & security boundaries...',
+    '🛠️ Synthesizing diagram nodes, coordinates & connectors...'
   ];
 
   useEffect(() => {
@@ -29,22 +29,42 @@ export const AIFlowModal: React.FC<AIFlowModalProps> = ({ onFlowGenerated, onClo
       setGenerationStep(0);
       interval = setInterval(() => {
         setGenerationStep((s) => (s < steps.length - 1 ? s + 1 : s));
-      }, 250);
+      }, 500);
     }
     return () => clearInterval(interval);
   }, [isGenerating]);
 
-  const handleGenerate = (textToUse?: string) => {
+  const handleGenerate = async (textToUse?: string) => {
     const finalPrompt = textToUse || prompt;
     if (!finalPrompt.trim()) return;
 
     setIsGenerating(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: finalPrompt })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.project && Array.isArray(data.project.nodes) && data.project.nodes.length > 0) {
+          onFlowGenerated(data.project);
+          setIsGenerating(false);
+          onClose();
+          return;
+        }
+      }
+      // Fallback
       const generatedProject = generateFlowFromPrompt(finalPrompt);
       onFlowGenerated(generatedProject);
+    } catch {
+      const generatedProject = generateFlowFromPrompt(finalPrompt);
+      onFlowGenerated(generatedProject);
+    } finally {
       setIsGenerating(false);
       onClose();
-    }, 750);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

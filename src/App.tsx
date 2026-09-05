@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FlowProject, FlowNode as FlowNodeType, FlowSection } from './types/flow';
+import { FlowProject, FlowNode as FlowNodeType, FlowEdge, FlowSection } from './types/flow';
 import { TEMPLATES } from './data/templates';
 import { ProjectDashboard } from './components/Dashboard/ProjectDashboard';
 import { Navbar } from './components/Navbar/Navbar';
@@ -10,11 +10,14 @@ import { FlowCanvas } from './components/Canvas/FlowCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { FlowPlayer } from './components/Simulation/FlowPlayer';
 import { TemplateModal } from './components/Modals/TemplateModal';
-import { AIFlowModal } from './components/Modals/AIFlowModal';
+import { AIFlowSidebar } from './components/Sidebar/AIFlowSidebar';
 import { KeyboardShortcutsModal } from './components/Modals/KeyboardShortcutsModal';
 import { ExportShareModal } from './components/Modals/ExportShareModal';
 import { CollaborationModal } from './components/Modals/CollaborationModal';
-import { Users, X } from 'lucide-react';
+import { ImportVisualizeModal } from './components/Modals/ImportVisualizeModal';
+import { SupportedFormat } from './utils/parsers';
+import { Users, X, Wand2, SlidersHorizontal } from 'lucide-react';
+import { insertFlowIntoCanvas } from './utils/aiGenerator';
 import { collabEngine, PeerPresence } from './crdt/yjsProvider';
 import {
   exportDiagramAsPng,
@@ -35,8 +38,20 @@ import './App.css';
 const PROJECTS_STORAGE_KEY = 'drafo_projects_store';
 const ACTIVE_PROJECT_STORAGE_KEY = 'drafo_active_project_id';
 
-const DEFAULT_BLANK_PROJECT: FlowProject = {
-  id: 'project-default',
+export function generate32DigitId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '');
+  }
+  const chars = '0123456789abcdef';
+  let id = '';
+  for (let i = 0; i < 32; i++) {
+    id += chars[Math.floor(Math.random() * 16)];
+  }
+  return id;
+}
+
+export const createBlankProject = (id?: string): FlowProject => ({
+  id: id || generate32DigitId(),
   name: 'Untitled Diagram',
   description: 'Visual Architecture Flowchart',
   version: '1.0.0',
@@ -53,11 +68,33 @@ const DEFAULT_BLANK_PROJECT: FlowProject = {
   sections: [],
   nodes: [],
   edges: []
-};
+});
 
-export const App: React.FC = () => {
-  // View Router: 'dashboard' | 'editor'
-  const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('dashboard');
+export interface AppProps {
+  initialView?: 'dashboard' | 'editor';
+}
+
+export const App: React.FC<AppProps> = ({ initialView }) => {
+  // View Router: 'dashboard' | 'editor' (Prioritizes 'editor' if ?id= is in URL)
+  const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      // If a project ID is present in the URL, prioritize opening the editor for that project!
+      if (urlParams.get('id')) return 'editor';
+
+      const stored = sessionStorage.getItem('drafo_current_view');
+      if (stored === 'editor' || stored === 'dashboard') return stored;
+      if (window.location.pathname.startsWith('/studio')) return 'editor';
+    }
+    return initialView || 'dashboard';
+  });
+
+  // Keep sessionStorage in sync with currentView so refreshes preserve the user view
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('drafo_current_view', currentView);
+    }
+  }, [currentView]);
 
   // Multi-Project Database State (Starts empty if user has no saved projects)
   const [projects, setProjects] = useState<FlowProject[]>(() => {
@@ -89,8 +126,69 @@ export const App: React.FC = () => {
 
   // Active Project for the Studio Editor
   const [project, setProject] = useState<FlowProject>(() => {
-    return projects[0] || DEFAULT_BLANK_PROJECT;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryId = urlParams.get('id');
+      if (queryId) {
+        const match = projects.find((p) => p.id === queryId);
+        if (match) return match;
+        return createBlankProject(queryId);
+      }
+
+      const activeId = localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
+      if (activeId) {
+        const match = projects.find((p) => p.id === activeId);
+        if (match) return match;
+      }
+    }
+    return projects[0] || createBlankProject();
   });
+
+  // Keep ACTIVE_PROJECT_STORAGE_KEY and browser URL synchronized:
+  // - In 'editor' view: /studio?id=<project-id>
+  // - In 'dashboard' view: /studio (clean URL with NO ?id= query param)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (currentView === 'editor') {
+        if (project?.id) {
+          localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
+          if (url.searchParams.get('id') !== project.id) {
+            url.searchParams.set('id', project.id);
+            window.history.replaceState({}, '', url.toString());
+          }
+        }
+      } else if (currentView === 'dashboard') {
+        // Cleanly strip ?id=... from the URL when viewing the Dashboard
+        if (url.searchParams.has('id')) {
+          url.searchParams.delete('id');
+          const cleanUrl = url.pathname + (url.search ? url.search : '') + (url.hash || '');
+          window.history.replaceState({}, '', cleanUrl);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [currentView, project?.id]);
+
+  // Support browser Back and Forward navigation buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryId = urlParams.get('id');
+      if (queryId) {
+        const match = projects.find((p) => p.id === queryId);
+        if (match) setProject(match);
+        setCurrentView('editor');
+      } else {
+        setCurrentView('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [projects]);
 
   // Collaboration Session State & Live Indicators
   const [collabRoomId, setCollabRoomId] = useState<string | null>(() => {
@@ -144,9 +242,10 @@ export const App: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 60, y: 40 });
 
-  // Sidebar Collapsibility
+  // Sidebar Collapsibility & Mode
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [rightSidebarTab, setRightSidebarTab] = useState<'inspector' | 'ai'>('inspector');
 
   // Presentation / Simulation State
   const [isSimulating, setIsSimulating] = useState(false);
@@ -154,10 +253,12 @@ export const App: React.FC = () => {
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCollabModalOpen, setIsCollabModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importInitialCode, setImportInitialCode] = useState<string | undefined>(undefined);
+  const [importInitialFormat, setImportInitialFormat] = useState<SupportedFormat | 'auto'>('auto');
 
   // Clipboard for nodes
   const [copiedNode, setCopiedNode] = useState<FlowNodeType | null>(null);
@@ -186,7 +287,8 @@ export const App: React.FC = () => {
           if (userOnly.length > 0) {
             setProjects(userOnly);
             setProject((curr) => {
-              const match = userOnly.find((p) => p.id === curr.id);
+              const activeId = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY) : null;
+              const match = userOnly.find((p) => p.id === (activeId || curr.id));
               return match || userOnly[0];
             });
           } else {
@@ -254,6 +356,25 @@ export const App: React.FC = () => {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Check URL query parameters on mount (e.g. ?template=nextjs-16-architecture)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const templateId = params.get('template');
+    if (templateId) {
+      const found = TEMPLATES.find((t) => t.id === templateId);
+      if (found) {
+        const cloned: FlowProject = JSON.parse(JSON.stringify(found));
+        cloned.id = `project-${Date.now()}`;
+        cloned.updatedAt = new Date().toISOString();
+        setProject(cloned);
+        setHistory([cloned]);
+        setHistoryIndex(0);
+        setCurrentView('editor');
+      }
+    }
   }, []);
 
   // Listen to remote CRDT project changes (via WebRTC or multi-tab BroadcastChannel)
@@ -336,37 +457,43 @@ export const App: React.FC = () => {
       setSelectedId(null);
       setSelectedType(null);
       setCurrentView('editor');
+      if (typeof window !== 'undefined') {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('id', projectId);
+          window.history.replaceState({}, '', url.toString());
+        } catch {
+          // ignore
+        }
+      }
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        const cleanUrl = url.pathname + (url.search ? url.search : '') + (url.hash || '');
+        window.history.replaceState({}, '', cleanUrl);
+      } catch {
+        // ignore
+      }
     }
   };
 
   const handleCreateProject = (templateId?: string) => {
     let baseProject: FlowProject;
+    const new32Id = generate32DigitId();
     if (templateId) {
       const template = TEMPLATES.find((t) => t.id === templateId) || TEMPLATES[0];
       baseProject = JSON.parse(JSON.stringify(template));
-      baseProject.id = `project-${Date.now()}`;
+      baseProject.id = new32Id;
       baseProject.name = `${template.name}`;
       baseProject.updatedAt = new Date().toISOString();
     } else {
-      baseProject = {
-        id: `project-${Date.now()}`,
-        name: 'Untitled Diagram',
-        description: 'Custom interactive flowchart & architecture model',
-        version: '1.0.0',
-        updatedAt: new Date().toISOString(),
-        tags: ['Architecture'],
-        canvasSettings: {
-          showGrid: true,
-          gridType: 'dots',
-          bgColor: '#FFFFFF',
-          snapToGrid: true,
-          gridSize: 20,
-          theme: 'light'
-        },
-        sections: [],
-        nodes: [],
-        edges: []
-      };
+      baseProject = createBlankProject(new32Id);
     }
 
     setProjects((prev) => [baseProject, ...prev]);
@@ -384,7 +511,7 @@ export const App: React.FC = () => {
     if (!target) return;
 
     const cloned: FlowProject = JSON.parse(JSON.stringify(target));
-    cloned.id = `project-${Date.now()}`;
+    cloned.id = generate32DigitId();
     cloned.name = `${target.name} (Copy)`;
     cloned.updatedAt = new Date().toISOString();
 
@@ -411,23 +538,109 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOpenImportModalWithContent = (code?: string, format?: SupportedFormat | 'auto') => {
+    setImportInitialCode(code);
+    setImportInitialFormat(format || 'auto');
+    setIsImportModalOpen(true);
+  };
+
+  const handleOpenAsNewDiagram = (newProject: FlowProject) => {
+    const timestamped: FlowProject = {
+      ...newProject,
+      id: `project-${Date.now()}`,
+      updatedAt: new Date().toISOString()
+    };
+    setProjects((prev) => [timestamped, ...prev]);
+    setProject(timestamped);
+    saveProjectToStore(timestamped);
+    setHistory([timestamped]);
+    setHistoryIndex(0);
+    setCurrentView('editor');
+    setIsImportModalOpen(false);
+  };
+
+  const handleInsertIntoCanvas = (newNodes: FlowNodeType[], newEdges: FlowEdge[]) => {
+    if (newNodes.length === 0) return;
+
+    let offsetX = 80;
+    let offsetY = 80;
+    if (project.nodes.length > 0) {
+      const maxX = Math.max(...project.nodes.map((n) => n.x + (n.width || 220)));
+      offsetX = maxX + 80;
+    }
+
+    const existingNodeIds = new Set(project.nodes.map((n) => n.id));
+    const existingEdgeIds = new Set(project.edges.map((e) => e.id));
+    const idMap = new Map<string, string>();
+
+    const remappedNodes: FlowNodeType[] = newNodes.map((node) => {
+      let finalId = node.id;
+      if (existingNodeIds.has(finalId)) {
+        finalId = `${node.id}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`;
+      }
+      idMap.set(node.id, finalId);
+      return {
+        ...node,
+        id: finalId,
+        x: Math.round(node.x + offsetX),
+        y: Math.round(node.y + offsetY)
+      };
+    });
+
+    const remappedEdges = newEdges.map((edge) => {
+      let finalEdgeId = edge.id;
+      if (existingEdgeIds.has(finalEdgeId)) {
+        finalEdgeId = `${edge.id}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`;
+      }
+      return {
+        ...edge,
+        id: finalEdgeId,
+        fromNodeId: idMap.get(edge.fromNodeId) || edge.fromNodeId,
+        toNodeId: idMap.get(edge.toNodeId) || edge.toNodeId
+      };
+    });
+
+    const updated: FlowProject = {
+      ...project,
+      nodes: [...project.nodes, ...remappedNodes],
+      edges: [...project.edges, ...remappedEdges]
+    };
+
+    updateProjectWithHistory(updated);
+    setIsImportModalOpen(false);
+  };
+
   const handleImportProject = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
+      const content = (e.target?.result as string) || '';
       try {
-        const content = e.target?.result as string;
         const imported = parseUploadedJson(content);
-        imported.id = `project-${Date.now()}`;
-        imported.updatedAt = new Date().toISOString();
-        setProjects((prev) => [imported, ...prev]);
-        setProject(imported);
-        saveProjectToStore(imported);
-        setHistory([imported]);
-        setHistoryIndex(0);
-        setCurrentView('editor');
-      } catch (err) {
-        alert('Invalid Drafo project JSON format.');
+        if (imported && Array.isArray(imported.nodes)) {
+          imported.id = `project-${Date.now()}`;
+          imported.updatedAt = new Date().toISOString();
+          setProjects((prev) => [imported, ...prev]);
+          setProject(imported);
+          saveProjectToStore(imported);
+          setHistory([imported]);
+          setHistoryIndex(0);
+          setCurrentView('editor');
+          return;
+        }
+      } catch {
+        // Not a Drafo project JSON - continue to Universal Import Modal
       }
+
+      // Check file extension to infer format if possible
+      const lowerName = file.name.toLowerCase();
+      let detectedFmt: SupportedFormat | 'auto' = 'auto';
+      if (lowerName.endsWith('.sql')) detectedFmt = 'sql';
+      else if (lowerName.endsWith('.json')) detectedFmt = 'json';
+      else if (lowerName.endsWith('.mmd') || lowerName.endsWith('.mermaid')) detectedFmt = 'mermaid';
+      else if (lowerName.endsWith('.puml') || lowerName.endsWith('.plantuml') || lowerName.endsWith('.uml')) detectedFmt = 'uml';
+      else if (lowerName.endsWith('.ts') || lowerName.endsWith('.tsx') || lowerName.endsWith('.graphql') || lowerName.endsWith('.gql')) detectedFmt = 'types';
+
+      handleOpenImportModalWithContent(content, detectedFmt);
     };
     reader.readAsText(file);
   };
@@ -1229,7 +1442,12 @@ export const App: React.FC = () => {
           projects={projects}
           onOpenProject={handleOpenProject}
           onCreateProject={handleCreateProject}
-          onOpenAIGenerator={() => setIsAIModalOpen(true)}
+          onOpenAIGenerator={() => {
+            setCurrentView('editor');
+            setIsRightSidebarOpen(true);
+            setRightSidebarTab('ai');
+          }}
+          onOpenImportVisualize={() => handleOpenImportModalWithContent()}
           onDuplicateProject={handleDuplicateProject}
           onDeleteProject={handleDeleteProject}
           onRenameProject={handleRenameProject}
@@ -1241,11 +1459,16 @@ export const App: React.FC = () => {
         <>
           {/* Top Universal Navbar */}
           <Navbar
+            projectId={project.id}
             projectName={project.name}
             onUpdateProjectName={(name) => updateProjectWithHistory({ ...project, name })}
-            onBackToDashboard={() => setCurrentView('dashboard')}
+            onBackToDashboard={handleBackToDashboard}
             onOpenTemplates={() => setIsTemplateModalOpen(true)}
-            onOpenAIGenerator={() => setIsAIModalOpen(true)}
+            onOpenAIGenerator={() => {
+              setIsRightSidebarOpen(true);
+              setRightSidebarTab('ai');
+            }}
+            onOpenImportVisualize={() => handleOpenImportModalWithContent()}
             onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
             onOpenExportStudio={() => setIsExportModalOpen(true)}
             onOpenCollaboration={() => setIsCollabModalOpen(true)}
@@ -1265,7 +1488,10 @@ export const App: React.FC = () => {
               onAddNode={handleAddNode}
               onAddSection={handleAddSection}
               onOpenTemplates={() => setIsTemplateModalOpen(true)}
-              onOpenAIGenerator={() => setIsAIModalOpen(true)}
+              onOpenAIGenerator={() => {
+                setIsRightSidebarOpen(true);
+                setRightSidebarTab('ai');
+              }}
             />
 
             {/* Center Infinite Interactive Canvas */}
@@ -1296,6 +1522,7 @@ export const App: React.FC = () => {
                   setIsSimulating(!isSimulating);
                   setActiveSimStep(isSimulating ? null : 0);
                 }}
+                onDropFile={handleImportProject}
               />
 
               {/* Interactive Step Simulation Bar when active */}
@@ -1361,22 +1588,90 @@ export const App: React.FC = () => {
               )}
             </main>
 
-            {/* Collapsible Right Property Inspector */}
-            <PropertyInspector
-              isOpen={isRightSidebarOpen}
-              onToggleCollapse={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-              project={project}
-              selectedId={selectedId}
-              selectedIds={selectedIds}
-              selectedType={selectedType}
-              onUpdateProject={updateProjectWithHistory}
-              onDeleteSelected={handleDeleteSelected}
-              onDuplicateSelected={handleDuplicateSelected}
-              onAlignSelected={handleAlign}
-              onDistributeSelected={handleDistribute}
-              onGroupSelected={handleGroupSelected}
-              onUngroupSelected={handleUngroupSelected}
-            />
+            {/* Collapsed Rail on Right Edge when Sidebar is Closed */}
+            {!isRightSidebarOpen && (
+              <div className="drafo-right-sidebar-collapsed-rail">
+                <button
+                  type="button"
+                  className="drafo-collapsed-rail-btn"
+                  onClick={() => {
+                    setIsRightSidebarOpen(true);
+                    setRightSidebarTab('inspector');
+                  }}
+                  title="Open Properties Inspector"
+                >
+                  <SlidersHorizontal size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="drafo-collapsed-rail-btn ai-rail-btn"
+                  onClick={() => {
+                    setIsRightSidebarOpen(true);
+                    setRightSidebarTab('ai');
+                  }}
+                  title="Open AI Flow Studio"
+                >
+                  <Wand2 size={15} />
+                  <span className="drafo-ai-rail-pulse" />
+                </button>
+              </div>
+            )}
+
+            {/* Collapsible Right Sidebar: AI Flow Studio or Property Inspector */}
+            {isRightSidebarOpen && (
+              rightSidebarTab === 'ai' ? (
+                <AIFlowSidebar
+                  isOpen={isRightSidebarOpen}
+                  onClose={() => setIsRightSidebarOpen(false)}
+                  activeTab={rightSidebarTab}
+                  onTabChange={setRightSidebarTab}
+                  currentProject={project}
+                  onFlowGenerated={(generated) => {
+                    const timestamped = {
+                      ...generated,
+                      id: `project-${Date.now()}`,
+                      updatedAt: new Date().toISOString()
+                    };
+                    setProjects((prev) => [timestamped, ...prev]);
+                    setProject(timestamped);
+                    setHistory([timestamped]);
+                    setHistoryIndex(0);
+                    setCurrentView('editor');
+                  }}
+                  onInsertFlow={(newFlow) => {
+                    const merged = insertFlowIntoCanvas(project, newFlow);
+                    updateProjectWithHistory(merged);
+                  }}
+                  onReplaceFlow={(newFlow) => {
+                    const timestamped = {
+                      ...newFlow,
+                      id: project.id,
+                      name: project.name,
+                      updatedAt: new Date().toISOString()
+                    };
+                    updateProjectWithHistory(timestamped);
+                  }}
+                />
+              ) : (
+                <PropertyInspector
+                  isOpen={isRightSidebarOpen}
+                  onToggleCollapse={() => setIsRightSidebarOpen(false)}
+                  activeTab={rightSidebarTab}
+                  onTabChange={setRightSidebarTab}
+                  project={project}
+                  selectedId={selectedId}
+                  selectedIds={selectedIds}
+                  selectedType={selectedType}
+                  onUpdateProject={updateProjectWithHistory}
+                  onDeleteSelected={handleDeleteSelected}
+                  onDuplicateSelected={handleDuplicateSelected}
+                  onAlignSelected={handleAlign}
+                  onDistributeSelected={handleDistribute}
+                  onGroupSelected={handleGroupSelected}
+                  onUngroupSelected={handleUngroupSelected}
+                />
+              )
+            )}
           </div>
         </>
       )}
@@ -1393,26 +1688,6 @@ export const App: React.FC = () => {
             setIsTemplateModalOpen(false);
           }}
           onClose={() => setIsTemplateModalOpen(false)}
-        />
-      )}
-
-      {/* AI Flow Generator Modal */}
-      {isAIModalOpen && (
-        <AIFlowModal
-          onFlowGenerated={(generated) => {
-            const timestamped = {
-              ...generated,
-              id: `project-${Date.now()}`,
-              updatedAt: new Date().toISOString()
-            };
-            setProjects((prev) => [timestamped, ...prev]);
-            setProject(timestamped);
-            setHistory([timestamped]);
-            setHistoryIndex(0);
-            setCurrentView('editor');
-            setIsAIModalOpen(false);
-          }}
-          onClose={() => setIsAIModalOpen(false)}
         />
       )}
 
@@ -1441,6 +1716,17 @@ export const App: React.FC = () => {
       <KeyboardShortcutsModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      {/* Universal Import & Visualize Studio (UML, Mermaid, SQL, JSON, Types) */}
+      <ImportVisualizeModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onOpenAsNewDiagram={handleOpenAsNewDiagram}
+        onInsertIntoCanvas={handleInsertIntoCanvas}
+        initialCode={importInitialCode}
+        initialFormat={importInitialFormat}
+        isEditorMode={currentView === 'editor'}
       />
     </div>
   );

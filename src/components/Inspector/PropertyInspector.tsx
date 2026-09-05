@@ -10,7 +10,6 @@ import {
   RouteType,
   LineStyle,
   ArrowheadType,
-  NodeStatus,
   PortPosition
 } from '../../types/flow';
 import { NODE_COLOR_PALETTES } from '../../data/colorPalettes';
@@ -59,7 +58,14 @@ import {
   Pipette,
   Check,
   Sparkles,
-  BookmarkPlus
+  BookmarkPlus,
+  Wand2,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Highlighter,
+  Type
 } from 'lucide-react';
 import { CustomSelect, SelectOption } from '../UI/CustomSelect';
 import {
@@ -68,6 +74,11 @@ import {
   loadCustomTemplates
 } from '../../data/styleTemplates';
 import { isColorDark } from '../../utils/colorUtils';
+import {
+  FONT_FAMILY_OPTIONS,
+  FONT_SIZE_PRESETS,
+  TEXT_HIGHLIGHT_PALETTE
+} from '../../utils/typography';
 import './Inspector.css';
 
 
@@ -93,17 +104,15 @@ const COMPONENT_TYPE_OPTIONS: SelectOption<NodeType>[] = [
   { value: 'mobile', label: 'Mobile Client App', sublabel: 'iOS / Android dynamic shell', icon: <Smartphone size={14} color="#0F172A" /> },
   { value: 'desktop', label: 'Desktop App Window', sublabel: 'Electron / Native client frame', icon: <Monitor size={14} color="#475569" /> },
   { value: 'terminal', label: 'Developer Terminal CLI', sublabel: 'Shell command prompt preview', icon: <Terminal size={14} color="#0F172A" /> },
+  { value: 'sql-table', label: 'SQL Database Table', sublabel: 'Relational table with columns & PK/FK', icon: <Database size={14} color="#7C3AED" /> },
+  { value: 'uml-class', label: 'UML Class Model', sublabel: 'Object class with members & methods', icon: <Box size={14} color="#4F46E5" /> },
+  { value: 'json-viewer', label: 'JSON Data Viewer', sublabel: 'Interactive JSON payload card', icon: <Box size={14} color="#10B981" /> },
+  { value: 'type-schema', label: 'TypeScript / Schema', sublabel: 'Data contract & type properties', icon: <Box size={14} color="#0284C7" /> },
   { value: 'decision', label: 'Decision Diamond', sublabel: 'Conditional branch diamond', icon: <GitFork size={14} color="#D97706" /> },
-  { value: 'note', label: 'Sticky Note', sublabel: 'Annotation sticky documentation', icon: <StickyNote size={14} color="#F59E0B" /> }
+  { value: 'note', label: 'Sticky Note', sublabel: 'Annotation sticky documentation', icon: <StickyNote size={14} color="#F59E0B" /> },
+  { value: 'text', label: 'Text Annotation', sublabel: 'Free-form canvas text label', icon: <Type size={14} color="#334155" /> }
 ];
 
-// Status & Health Options with Live Status Color Dots
-const STATUS_OPTIONS: SelectOption<NodeStatus>[] = [
-  { value: 'online', label: 'Online', sublabel: 'Active & Healthy (200 OK)', indicatorColor: '#10B981' },
-  { value: 'idle', label: 'Idle', sublabel: 'Standby / Low Traffic', indicatorColor: '#F59E0B' },
-  { value: 'busy', label: 'Busy', sublabel: 'Processing / High Queue', indicatorColor: '#3B82F6' },
-  { value: 'error', label: 'Degraded / Error', sublabel: 'Elevated Error Rate / Failed', indicatorColor: '#EF4444' }
-];
 
 // Mobile Device Shell Options
 const DEVICE_OPTIONS: SelectOption<'iphone' | 'android' | 'tablet'>[] = [
@@ -126,6 +135,8 @@ const BATCH_PALETTE_OPTIONS: SelectOption<string>[] = Object.keys(NODE_COLOR_PAL
 interface PropertyInspectorProps {
   isOpen?: boolean;
   onToggleCollapse?: () => void;
+  activeTab?: 'inspector' | 'ai';
+  onTabChange?: (tab: 'inspector' | 'ai') => void;
   project: FlowProject;
   selectedId: string | null;
   selectedIds?: string[];
@@ -142,6 +153,8 @@ interface PropertyInspectorProps {
 export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
   isOpen = true,
   onToggleCollapse,
+  activeTab = 'inspector',
+  onTabChange,
   project,
   selectedId,
   selectedIds = [],
@@ -185,20 +198,22 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 16,
-          height: 16,
-          borderRadius: 4,
+          width: 18,
+          height: 18,
+          borderRadius: 5,
           backgroundColor: t.bg === 'transparent' ? '#FFFFFF' : t.bg,
-          border: '1px solid #CBD5E1',
+          border: `1.5px solid ${t.borderColor || t.accentColor}`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
           flexShrink: 0
         }}
       >
         <span
           style={{
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             borderRadius: '50%',
-            backgroundColor: t.accentColor
+            backgroundColor: t.accentColor,
+            boxShadow: '0 0 3px rgba(0,0,0,0.25)'
           }}
         />
       </span>
@@ -262,6 +277,22 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
     if (!selectedNode) return;
     const updatedNodes = project.nodes.map((n) =>
       n.id === selectedNode.id ? { ...n, ...updates } : n
+    );
+    onUpdateProject({ ...project, nodes: updatedNodes });
+  };
+
+  const updateNodeCustomData = (updates: Partial<NonNullable<FlowNodeType['customData']>>) => {
+    if (!selectedNode) return;
+    const updatedNodes = project.nodes.map((n) =>
+      n.id === selectedNode.id
+        ? {
+            ...n,
+            customData: {
+              ...n.customData,
+              ...updates
+            }
+          }
+        : n
     );
     onUpdateProject({ ...project, nodes: updatedNodes });
   };
@@ -358,6 +389,42 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
 
   return (
     <aside className="drafo-inspector-panel">
+      {/* Top Dual-Tab Navigation Strip: Properties vs AI Flow */}
+      {onTabChange && (
+        <div className="drafo-inspector-nav-strip">
+          <div className="drafo-inspector-nav-tabs">
+            <button
+              type="button"
+              className={`drafo-inspector-nav-tab ${activeTab === 'inspector' ? 'active' : ''}`}
+              onClick={() => onTabChange('inspector')}
+            >
+              <SlidersHorizontal size={13} />
+              <span>Inspector</span>
+            </button>
+            <button
+              type="button"
+              className="drafo-inspector-nav-tab ai-tab"
+              onClick={() => onTabChange('ai')}
+              title="Open AI Flow Studio"
+            >
+              <Wand2 size={13} />
+              <span>AI Studio</span>
+              <span className="drafo-ai-tab-glow-pill">AI</span>
+            </button>
+          </div>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              className="drafo-inspector-collapse-strip-btn"
+              onClick={onToggleCollapse}
+              title="Collapse Inspector"
+            >
+              <ChevronRight size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* =========================================================================
           MULTI-NODE SELECTION & ALIGNMENT INSPECTOR
           ========================================================================= */}
@@ -773,59 +840,85 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
           </div>
 
           {/* Node Text & Titles */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">
-              {isContainerSelected ? 'Container Name' : 'Primary Title'}
-            </label>
-            <input
-              type="text"
-              className="drafo-input"
-              value={selectedNode.title}
-              onChange={(e) => updateNodeProps({ title: e.target.value })}
-            />
-          </div>
-
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">
-              {isContainerSelected ? 'Zone / CIDR Tag' : 'Subtitle / Route (Path)'}
-            </label>
-            <input
-              type="text"
-              className="drafo-input"
-              value={selectedNode.subtitle || ''}
-              onChange={(e) => updateNodeProps({ subtitle: e.target.value })}
-              placeholder={isContainerSelected ? 'e.g. 10.0.0.0/16 or us-east-1' : 'e.g. /api/auth/callback'}
-            />
-          </div>
-
-          {!isContainerSelected && (
+          {selectedNode.type === 'text' ? (
             <div className="drafo-form-field">
-              <label className="drafo-field-label">Status & Health</label>
-              <CustomSelect<NodeStatus>
-                value={selectedNode.status || 'online'}
-                options={STATUS_OPTIONS}
-                onChange={(val) => updateNodeProps({ status: val })}
+              <label className="drafo-field-label">Text Content</label>
+              <textarea
+                className="drafo-input"
+                style={{ minHeight: 80, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}
+                value={selectedNode.title}
+                onChange={(e) => updateNodeProps({ title: e.target.value })}
+                placeholder="Type text annotation content here..."
               />
             </div>
-          )}
+          ) : (
+            <>
+              <div className="drafo-form-field">
+                <label className="drafo-field-label">
+                  {isContainerSelected
+                    ? 'Container Name'
+                    : selectedNode.type === 'note'
+                    ? 'Note Title'
+                    : 'Primary Title'}
+                </label>
+                <input
+                  type="text"
+                  className="drafo-input"
+                  value={selectedNode.title}
+                  onChange={(e) => updateNodeProps({ title: e.target.value })}
+                />
+              </div>
 
-          {/* Node Tags */}
-          <div className="drafo-form-field">
-            <label className="drafo-field-label">Component Tags (comma separated)</label>
-            <input
-              type="text"
-              className="drafo-input"
-              value={(selectedNode.tags || []).join(', ')}
-              onChange={(e) => {
-                const tags = e.target.value
-                  .split(',')
-                  .map((t) => t.trim().replace(/^#/, ''))
-                  .filter(Boolean);
-                updateNodeProps({ tags });
-              }}
-              placeholder="e.g. frontend, auth, edge"
-            />
-          </div>
+              <div className="drafo-form-field">
+                <label className="drafo-field-label">
+                  {isContainerSelected
+                    ? 'Zone / CIDR Tag'
+                    : selectedNode.type === 'note'
+                    ? 'Note Body'
+                    : 'Subtitle / Route (Path)'}
+                </label>
+                {selectedNode.type === 'note' ? (
+                  <textarea
+                    className="drafo-input"
+                    style={{ minHeight: 68, resize: 'vertical', fontFamily: 'inherit' }}
+                    value={selectedNode.subtitle || ''}
+                    onChange={(e) => updateNodeProps({ subtitle: e.target.value })}
+                    placeholder="Write sticky note details..."
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    className="drafo-input"
+                    value={selectedNode.subtitle || ''}
+                    onChange={(e) => updateNodeProps({ subtitle: e.target.value })}
+                    placeholder={
+                      isContainerSelected ? 'e.g. 10.0.0.0/16 or us-east-1' : 'e.g. /api/auth/callback'
+                    }
+                  />
+                )}
+              </div>
+
+              {/* Node Tags */}
+              {selectedNode.type !== 'note' && (
+                <div className="drafo-form-field">
+                  <label className="drafo-field-label">Component Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    className="drafo-input"
+                    value={(selectedNode.tags || []).join(', ')}
+                    onChange={(e) => {
+                      const tags = e.target.value
+                        .split(',')
+                        .map((t) => t.trim().replace(/^#/, ''))
+                        .filter(Boolean);
+                      updateNodeProps({ tags });
+                    }}
+                    placeholder="e.g. frontend, auth, edge"
+                  />
+                </div>
+              )}
+            </>
+          )}
 
           {/* Custom Node Data Inspector */}
           {selectedNode.type === 'browser' && (
@@ -922,6 +1015,309 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                 value={selectedNode.height}
                 onChange={(e) => updateNodeProps({ height: Math.max(40, Number(e.target.value)) })}
               />
+            </div>
+          </div>
+
+          {/* =========================================================================
+              TYPOGRAPHY & TEXT FORMATTING
+              ========================================================================= */}
+          <div className="drafo-form-field">
+            <div className="drafo-typography-panel">
+              <div className="drafo-typography-panel-header">
+                <Type size={13} color="#2563EB" />
+                <span>Typography & Formatting</span>
+                {selectedNode.type === 'text' && (
+                  <span className="drafo-badge-pill" style={{ marginLeft: 'auto', fontSize: 10, background: '#EFF6FF', color: '#2563EB', padding: '2px 6px', borderRadius: 4 }}>Text Node</span>
+                )}
+              </div>
+
+              {/* 1. Font Family Selector */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Font Family</label>
+                <CustomSelect<string>
+                  value={selectedNode.customData?.fontFamily || 'sans'}
+                  options={FONT_FAMILY_OPTIONS}
+                  onChange={(val) => updateNodeCustomData({ fontFamily: val as any })}
+                  placeholder="Select Font..."
+                />
+              </div>
+
+              {/* 2. Font Size Stepper & Quick Presets */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Font Size</label>
+                <div className="drafo-font-size-stepper-row">
+                  <button
+                    type="button"
+                    className="drafo-font-stepper-btn"
+                    onClick={() => {
+                      const cur = Number(selectedNode.customData?.fontSize || 14);
+                      updateNodeCustomData({ fontSize: Math.max(8, cur - 1) });
+                    }}
+                    title="Decrease font size"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={8}
+                    max={120}
+                    value={selectedNode.customData?.fontSize || 14}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        updateNodeCustomData({ fontSize: Math.min(120, Math.max(8, val)) });
+                      }
+                    }}
+                    className="drafo-font-size-input"
+                  />
+                  <span className="drafo-font-size-unit">px</span>
+                  <button
+                    type="button"
+                    className="drafo-font-stepper-btn"
+                    onClick={() => {
+                      const cur = Number(selectedNode.customData?.fontSize || 14);
+                      updateNodeCustomData({ fontSize: Math.min(120, cur + 1) });
+                    }}
+                    title="Increase font size"
+                  >
+                    +
+                  </button>
+                </div>
+                {/* Quick Size Preset Chips */}
+                <div className="drafo-font-presets-row">
+                  {FONT_SIZE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={`drafo-font-preset-chip ${(selectedNode.customData?.fontSize || 14) === preset ? 'active' : ''}`}
+                      onClick={() => updateNodeCustomData({ fontSize: preset })}
+                      title={`${preset}px`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Text Style & Decoration (Bold, Italic, Underline, Strikethrough) */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Style & Decoration</label>
+                <div className="drafo-segmented-control">
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${
+                      selectedNode.customData?.fontWeight === 'bold' ||
+                      selectedNode.customData?.fontWeight === 700 ||
+                      selectedNode.customData?.fontWeight === 600
+                        ? 'active'
+                        : ''
+                    }`}
+                    onClick={() => {
+                      const isBold =
+                        selectedNode.customData?.fontWeight === 'bold' ||
+                        selectedNode.customData?.fontWeight === 700 ||
+                        selectedNode.customData?.fontWeight === 600;
+                      updateNodeCustomData({ fontWeight: isBold ? 400 : 'bold' });
+                    }}
+                    title="Toggle Bold (Ctrl+B)"
+                  >
+                    <Bold size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${selectedNode.customData?.fontStyle === 'italic' ? 'active' : ''}`}
+                    onClick={() => {
+                      const isItalic = selectedNode.customData?.fontStyle === 'italic';
+                      updateNodeCustomData({ fontStyle: isItalic ? 'normal' : 'italic' });
+                    }}
+                    title="Toggle Italic (Ctrl+I)"
+                  >
+                    <Italic size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${selectedNode.customData?.textDecoration === 'underline' ? 'active' : ''}`}
+                    onClick={() => {
+                      const isUnderline = selectedNode.customData?.textDecoration === 'underline';
+                      updateNodeCustomData({ textDecoration: isUnderline ? 'none' : 'underline' });
+                    }}
+                    title="Toggle Underline (Ctrl+U)"
+                  >
+                    <Underline size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${selectedNode.customData?.textDecoration === 'line-through' ? 'active' : ''}`}
+                    onClick={() => {
+                      const isStrike = selectedNode.customData?.textDecoration === 'line-through';
+                      updateNodeCustomData({ textDecoration: isStrike ? 'none' : 'line-through' });
+                    }}
+                    title="Toggle Strikethrough"
+                  >
+                    <Strikethrough size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. Text Alignment (Left, Center, Right, Justify) */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Alignment</label>
+                <div className="drafo-segmented-control">
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textAlign || 'left') === 'left' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textAlign: 'left' })}
+                    title="Align Left"
+                  >
+                    <AlignLeft size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textAlign || 'left') === 'center' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textAlign: 'center' })}
+                    title="Align Center"
+                  >
+                    <AlignCenter size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textAlign || 'left') === 'right' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textAlign: 'right' })}
+                    title="Align Right"
+                  >
+                    <AlignRight size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textAlign || 'left') === 'justify' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textAlign: 'justify' })}
+                    title="Justify"
+                  >
+                    <AlignJustify size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. Text Transformation (Case) */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Text Case</label>
+                <div className="drafo-segmented-control">
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textTransform || 'none') === 'none' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textTransform: 'none' })}
+                    title="Normal Case"
+                    style={{ fontSize: 11, fontWeight: 500 }}
+                  >
+                    Aa
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textTransform || 'none') === 'uppercase' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textTransform: 'uppercase' })}
+                    title="UPPERCASE"
+                    style={{ fontSize: 11, fontWeight: 700 }}
+                  >
+                    AA
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textTransform || 'none') === 'lowercase' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textTransform: 'lowercase' })}
+                    title="lowercase"
+                    style={{ fontSize: 11 }}
+                  >
+                    aa
+                  </button>
+                  <button
+                    type="button"
+                    className={`drafo-segment-btn ${(selectedNode.customData?.textTransform || 'none') === 'capitalize' ? 'active' : ''}`}
+                    onClick={() => updateNodeCustomData({ textTransform: 'capitalize' })}
+                    title="Capitalize"
+                    style={{ fontSize: 11, textTransform: 'capitalize' }}
+                  >
+                    Ab
+                  </button>
+                </div>
+              </div>
+
+              {/* 6. Text Color & Highlight Marker */}
+              <div className="drafo-typography-subfield">
+                <label className="drafo-field-label">Text Color</label>
+                <div className="drafo-color-item-row">
+                  <div className="drafo-color-item-picker-box" style={{ width: '100%' }}>
+                    <label className="drafo-color-chip-btn" title="Pick text color">
+                      <span
+                        className="drafo-color-chip-preview"
+                        style={{
+                          backgroundColor: selectedNode.style.textColor || '#0F172A',
+                          border: '1px solid #CBD5E1'
+                        }}
+                      />
+                      <input
+                        type="color"
+                        value={
+                          selectedNode.style.textColor && selectedNode.style.textColor.startsWith('#')
+                            ? selectedNode.style.textColor
+                            : '#0F172A'
+                        }
+                        onChange={(e) => {
+                          updateNodeStyle({ textColor: e.target.value });
+                        }}
+                        className="drafo-color-native-hidden"
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      className="drafo-color-hex-input"
+                      value={selectedNode.style.textColor || '#0F172A'}
+                      onChange={(e) => {
+                        updateNodeStyle({ textColor: e.target.value });
+                      }}
+                      placeholder="#0F172A"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 7. Highlight Marker Color */}
+              <div className="drafo-typography-subfield">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label className="drafo-field-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Highlighter size={12} color="#EAB308" />
+                    Highlighter Marker
+                  </label>
+                  {selectedNode.customData?.textHighlight && selectedNode.customData.textHighlight !== 'transparent' && (
+                    <button
+                      type="button"
+                      style={{ fontSize: 11, background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => updateNodeCustomData({ textHighlight: 'transparent' })}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="drafo-highlight-swatches-row">
+                  {TEXT_HIGHLIGHT_PALETTE.map((hp) => {
+                    const isSelected = (selectedNode.customData?.textHighlight || 'transparent').toLowerCase() === hp.color.toLowerCase();
+                    return (
+                      <button
+                        key={hp.name}
+                        type="button"
+                        className={`drafo-highlight-chip ${isSelected ? 'active' : ''}`}
+                        style={{
+                          backgroundColor: hp.color === 'transparent' ? '#FFFFFF' : hp.color,
+                          borderColor: isSelected ? '#2563EB' : '#CBD5E1'
+                        }}
+                        onClick={() => updateNodeCustomData({ textHighlight: hp.color })}
+                        title={hp.label}
+                      >
+                        {hp.color === 'transparent' && <span style={{ fontSize: 10, color: '#94A3B8' }}>None</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1235,11 +1631,11 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               </button>
             </div>
             <div className="canva-tip-banner">
-              💡 <strong>Canva Touch:</strong> Drag the blue dots at the ends to snap to any node port, or drag the middle dot to bend the curve.
+              💡 <strong>Pro Tip:</strong> Drag the handles at the ends to snap to any node port, or drag the center handle to bend the curve.
             </div>
           </div>
 
-          {/* 2. Line Weight & Style (Canva Slider & Dash previews) */}
+          {/* 2. Line Weight & Style (Custom Slider & Dash previews) */}
           <div className="drafo-form-field">
             <div className="canva-weight-header">
               <label className="drafo-field-label" style={{ marginBottom: 0 }}>Line Weight</label>
@@ -1251,6 +1647,9 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               max="8"
               step="0.5"
               className="drafo-slider"
+              style={{
+                '--slider-pct': `${(((selectedEdge.width || 1.5) - 1) / (8 - 1)) * 100}%`
+              } as React.CSSProperties}
               value={selectedEdge.width || 1.5}
               onChange={(e) => updateEdgeProps({ width: Number(e.target.value) })}
             />
@@ -1295,10 +1694,10 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
             <label className="drafo-field-label">Line Start & End</label>
             <div className="canva-markers-row">
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 3, fontWeight: 600 }}>Start Tip</div>
+                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 4, fontWeight: 600 }}>Start Tip</div>
                 <select
                   className="drafo-input"
-                  style={{ height: 32, fontSize: 11, padding: '2px 8px' }}
+                  style={{ height: 32, fontSize: 11, padding: '2px 6px' }}
                   value={selectedEdge.arrowheadStart || (selectedEdge.bidirectional ? selectedEdge.arrowhead : 'none')}
                   onChange={(e) => {
                     const val = e.target.value as ArrowheadType;
@@ -1308,10 +1707,10 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
                     });
                   }}
                 >
-                  <option value="none">None (—)</option>
-                  <option value="arrow">Filled Arrow (◀)</option>
-                  <option value="open">Open Arrow (&lt;)</option>
-                  <option value="circle">Circle Dot (●)</option>
+                  <option value="none">— None</option>
+                  <option value="arrow">◀ Arrow</option>
+                  <option value="open">&lt; Open</option>
+                  <option value="circle">● Dot</option>
                 </select>
               </div>
 
@@ -1333,17 +1732,17 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               </button>
 
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 3, fontWeight: 600 }}>End Tip</div>
+                <div style={{ fontSize: 10, color: 'var(--drafo-text-secondary, #64748B)', marginBottom: 4, fontWeight: 600 }}>End Tip</div>
                 <select
                   className="drafo-input"
-                  style={{ height: 32, fontSize: 11, padding: '2px 8px' }}
+                  style={{ height: 32, fontSize: 11, padding: '2px 6px' }}
                   value={selectedEdge.arrowhead || 'arrow'}
                   onChange={(e) => updateEdgeProps({ arrowhead: e.target.value as ArrowheadType })}
                 >
-                  <option value="none">None (—)</option>
-                  <option value="arrow">Filled Arrow (▶)</option>
-                  <option value="open">Open Arrow (&gt;)</option>
-                  <option value="circle">Circle Dot (●)</option>
+                  <option value="none">— None</option>
+                  <option value="arrow">▶ Arrow</option>
+                  <option value="open">&gt; Open</option>
+                  <option value="circle">● Dot</option>
                 </select>
               </div>
             </div>
@@ -1547,6 +1946,24 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({
               </button>
             )}
           </div>
+
+          {/* Quick AI Flow Launch Banner */}
+          {onTabChange && (
+            <div
+              className="drafo-inspector-ai-banner"
+              onClick={() => onTabChange('ai')}
+              title="Open AI Flow Studio"
+            >
+              <div className="drafo-inspector-ai-banner-icon">
+                <Wand2 size={16} />
+              </div>
+              <div className="drafo-inspector-ai-banner-text">
+                <span className="drafo-inspector-ai-banner-title">AI Flow Generator</span>
+                <span className="drafo-inspector-ai-banner-sub">Synthesize architecture with prompt</span>
+              </div>
+              <ChevronRight size={14} className="drafo-inspector-ai-banner-arrow" />
+            </div>
+          )}
 
           {/* Project Name */}
           <div className="drafo-form-field">

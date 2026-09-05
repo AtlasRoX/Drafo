@@ -1,13 +1,13 @@
 /* Drafo Application Layout CSS */
 
 .drafo-app-root {
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: #FAFAFC;
-  font-family: 'Plus Jakarta Sans', 'Outfit', 'Google Sans', 'Hind Siliguri', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
+  font-family: 'Google Sans', 'Product Sans', 'Plus Jakarta Sans', 'Outfit', 'Hind Siliguri', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
 }
 
 .drafo-studio-layout {

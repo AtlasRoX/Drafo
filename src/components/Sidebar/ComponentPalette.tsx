@@ -44,7 +44,9 @@ import {
   FileText,
   Network,
   Share2,
-  Repeat
+  Repeat,
+  Table,
+  Type
 } from 'lucide-react';
 import { FlowNode as FlowNodeType, NodeType } from '../../types/flow';
 import { NODE_COLOR_PALETTES } from '../../data/colorPalettes';
@@ -276,6 +278,146 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
       },
 
       // 2. DATABASES & STORAGE
+      {
+        id: 'gen-sql-table',
+        type: 'sql-table',
+        name: 'SQL Table / Entity',
+        description: 'Relational table with columns & PK/FK',
+        category: 'Databases & Storage',
+        icon: <Table size={15} />,
+        iconBg: '#F5F3FF',
+        iconColor: '#7C3AED',
+        preset: {
+          type: 'sql-table',
+          width: 240,
+          height: 180,
+          title: 'users',
+          subtitle: '4 columns',
+          status: 'online',
+          style: {
+            bg: '#FFFFFF',
+            borderColor: '#7C3AED',
+            headerBg: '#7C3AED',
+            headerColor: '#FFFFFF',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            colorPalette: 'purple'
+          },
+          customData: {
+            sqlTableName: 'users',
+            sqlSchemaName: 'public',
+            sqlColumns: [
+              { name: 'id', type: 'UUID', isPk: true },
+              { name: 'email', type: 'VARCHAR(255)', isNullable: false },
+              { name: 'full_name', type: 'VARCHAR(100)' },
+              { name: 'created_at', type: 'TIMESTAMP' }
+            ]
+          }
+        }
+      },
+      {
+        id: 'gen-uml-class',
+        type: 'uml-class',
+        name: 'UML Class Model',
+        description: 'UML class with members & methods',
+        category: 'Databases & Storage',
+        icon: <FileText size={15} />,
+        iconBg: '#EEF2FF',
+        iconColor: '#4F46E5',
+        preset: {
+          type: 'uml-class',
+          width: 230,
+          height: 170,
+          title: 'UserAccount',
+          subtitle: '<<entity>>',
+          status: 'online',
+          style: {
+            bg: '#FFFFFF',
+            borderColor: '#4F46E5',
+            borderWidth: 1.5,
+            borderRadius: 8,
+            colorPalette: 'indigo'
+          },
+          customData: {
+            umlStereotype: '<<entity>>',
+            umlMembers: [
+              { name: 'id: UUID', visibility: '+', isMethod: false },
+              { name: 'passwordHash: string', visibility: '-', isMethod: false },
+              { name: 'authenticate(): boolean', visibility: '+', isMethod: true },
+              { name: 'getProfile(): Profile', visibility: '+', isMethod: true }
+            ]
+          }
+        }
+      },
+      {
+        id: 'gen-json-viewer',
+        type: 'json-viewer',
+        name: 'JSON Data Viewer',
+        description: 'Formatted interactive JSON card',
+        category: 'Databases & Storage',
+        icon: <FileText size={15} />,
+        iconBg: '#F0FDF4',
+        iconColor: '#10B981',
+        preset: {
+          type: 'json-viewer',
+          width: 250,
+          height: 180,
+          title: 'CustomerPayload',
+          subtitle: 'JSON Object',
+          status: 'online',
+          style: {
+            bg: '#FFFFFF',
+            borderColor: '#10B981',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            colorPalette: 'green'
+          },
+          customData: {
+            jsonData: {
+              id: 'cus_9941',
+              name: 'John Doe',
+              plan: 'pro_tier',
+              active: true
+            }
+          }
+        }
+      },
+      {
+        id: 'gen-type-schema',
+        type: 'type-schema',
+        name: 'TypeScript Schema',
+        description: 'Contract interface with field types',
+        category: 'Databases & Storage',
+        icon: <Table size={15} />,
+        iconBg: '#EFF6FF',
+        iconColor: '#2563EB',
+        preset: {
+          type: 'type-schema',
+          width: 240,
+          height: 170,
+          title: 'UserProfile',
+          subtitle: 'TypeScript Interface',
+          status: 'online',
+          style: {
+            bg: '#FFFFFF',
+            borderColor: '#2563EB',
+            headerBg: '#2563EB',
+            headerColor: '#FFFFFF',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            colorPalette: 'blue'
+          },
+          customData: {
+            schemaKind: 'typescript',
+            schemaProperties: [
+              { name: 'id', type: 'string', required: true },
+              { name: 'email', type: 'string', required: true },
+              { name: 'avatarUrl', type: 'string', required: false },
+              { name: 'roles', type: 'string[]', required: true }
+            ]
+          }
+        }
+      },
       {
         id: 'gen-database',
         type: 'database',
@@ -735,26 +877,58 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
         }
       },
       {
+        id: 'gen-text',
+        type: 'text',
+        name: 'Text Annotation',
+        description: 'Free-form canvas text label',
+        category: 'Flow & Structure',
+        icon: <Type size={15} />,
+        iconBg: '#F1F5F9',
+        iconColor: '#334155',
+        preset: {
+          type: 'text',
+          width: 180,
+          height: 48,
+          title: 'Text Annotation',
+          subtitle: '',
+          customData: {
+            fontSize: 16,
+            fontWeight: 'normal',
+            textAlign: 'left'
+          },
+          style: {
+            bg: 'transparent',
+            borderColor: 'transparent',
+            borderWidth: 0,
+            borderRadius: 0,
+            colorPalette: 'slate'
+          }
+        }
+      },
+      {
         id: 'gen-note',
         type: 'note',
         name: 'Sticky Note',
-        description: 'Canvas documentation note',
+        description: '3D Tactile sticky note with colors & fold',
         category: 'Flow & Structure',
         icon: <StickyNote size={15} />,
         iconBg: '#FEFCE8',
         iconColor: '#CA8A04',
         preset: {
           type: 'note',
-          width: 140,
-          height: 110,
-          title: 'Architecture Note',
-          subtitle: 'Double click to edit notes...',
+          width: 170,
+          height: 150,
+          title: 'Sticky Note',
+          subtitle: 'Double-click to write notes...',
+          customData: {
+            stickyColor: 'yellow'
+          },
           style: {
-            bg: '#FEFCE8',
-            borderColor: '#FDE047',
+            bg: '#FEF08A',
+            borderColor: '#FACC15',
             textColor: '#713F12',
             subtextColor: '#854D0E',
-            borderRadius: 6,
+            borderRadius: 8,
             borderWidth: 1,
             shadow: true,
             colorPalette: 'yellow'

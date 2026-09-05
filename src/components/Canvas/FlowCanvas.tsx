@@ -22,6 +22,7 @@ import {
   Pause,
   MousePointer,
   Hand,
+  Type,
   Search,
   X
 } from 'lucide-react';
@@ -73,6 +74,7 @@ interface FlowCanvasProps {
   canRedo?: boolean;
   isSimulating?: boolean;
   onToggleSimulation?: () => void;
+  onDropFile?: (file: File) => void;
 }
 
 export const FlowCanvas: React.FC<FlowCanvasProps> = ({
@@ -97,16 +99,20 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   canUndo = false,
   canRedo = false,
   isSimulating = false,
-  onToggleSimulation
+  onToggleSimulation,
+  onDropFile
 }) => {
-  // Canvas Interaction Mode ('select' for marquee selection, 'hand' for direct canvas panning)
-  const [toolMode, setToolMode] = useState<'select' | 'hand'>('select');
+  // Canvas Interaction Mode ('select' for marquee selection, 'hand' for direct canvas panning, 'text' for adding text)
+  const [toolMode, setToolMode] = useState<'select' | 'hand' | 'text'>('select');
 
   // Mini-Map Radar state
   const [isMiniMapOpen, setIsMiniMapOpen] = useState(true);
 
   // Marquee Selection Box
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+
+  // Last mouse position on screen for accurate pasting
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Collaborative Remote Peers Presence
   const [peers, setPeers] = useState<PeerPresence[]>(() => collabEngine.getRemotePeers());
@@ -119,9 +125,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
   // State for dragging nodes and sections
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const draggingNodeIdRef = useRef<string | null>(null);
+  draggingNodeIdRef.current = draggingNodeId;
+
   const [containerChildrenIds, setContainerChildrenIds] = useState<string[]>([]);
+
   const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
+  const draggingSectionIdRef = useRef<string | null>(null);
+  draggingSectionIdRef.current = draggingSectionId;
+
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragSnapshotRef = useRef<FlowProject | null>(null);
   const projectRef = useRef<FlowProject>(project);
   projectRef.current = project;
@@ -160,11 +174,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   // State for canvas panning
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
-  // State for dragging edge waypoint / custom routing
+  // State for dragging edge waypoint / custom routing (supports arbitrary multiple waypoints)
   const [draggingWaypoint, setDraggingWaypoint] = useState<{
     edgeId: string;
+    waypointIndex?: number;
     startX: number;
     startY: number;
   } | null>(null);
@@ -208,10 +224,113 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   selectedSetRef.current = useMemo(() => new Set(selectedIds), [selectedIds]);
   const hasDraggedNodeRef = useRef(false);
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingDragNodeIdRef = useRef<string | null>(null);
+  const isPanningRef = useRef(isPanning);
+  isPanningRef.current = isPanning;
+  const resizingRef = useRef(resizing);
+  resizingRef.current = resizing;
+  const selectionBoxRef = useRef(selectionBox);
+  selectionBoxRef.current = selectionBox;
   // Lightweight drag snapshot — only positions, no JSON.parse(JSON.stringify)
   const dragInitialPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const dragInitialEdgeControlsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const dragInitialOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Multi-edge offset calculation: cleanly separates multiple/bidirectional edges between the same two nodes
+  const multiEdgeOffsets = useMemo(() => {
+    const pairMap = new Map<string, FlowEdgeType[]>();
+    for (const edge of project.edges) {
+      const pairKey = [edge.fromNodeId, edge.toNodeId].sort().join(':::');
+      const list = pairMap.get(pairKey) || [];
+      list.push(edge);
+      pairMap.set(pairKey, list);
+    }
+
+    const offsets = new Map<string, number>();
+
+    pairMap.forEach((edges) => {
+      if (edges.length <= 1) return;
+      const total = edges.length;
+      if (total === 2) {
+        const [e1, e2] = edges;
+        const isOpposite = e1.fromNodeId === e2.toNodeId && e1.toNodeId === e2.fromNodeId;
+        if (isOpposite) {
+          // Opposite direction: both having +34 in their local coordinate systems
+          // naturally bows them in opposite directions in world coordinates!
+          offsets.set(e1.id, 34);
+          offsets.set(e2.id, 34);
+        } else {
+          // Same direction: one bows left (-34), one bows right (+34)
+          offsets.set(e1.id, -34);
+          offsets.set(e2.id, 34);
+        }
+      } else {
+        const spacing = 32;
+        const half = (total - 1) / 2;
+        edges.forEach((e, idx) => {
+          offsets.set(e.id, (idx - half) * spacing);
+        });
+      }
+    });
+
+    return offsets;
+  }, [project.edges]);
+
+  // Global label collision detector: ensures NO two edge labels ever overlap on canvas
+  const labelCollisionAdjustments = useMemo(() => {
+    const adjustments = new Map<string, { x: number; y: number }>();
+    
+    // First pass: compute preliminary label positions for all labeled edges
+    const labeledEdges: { id: string; x: number; y: number }[] = [];
+    for (const edge of project.edges) {
+      if (!edge.label && edge.stepNumber === undefined) continue;
+      const source = project.nodes.find((n) => n.id === edge.fromNodeId);
+      const target = project.nodes.find((n) => n.id === edge.toNodeId);
+      if (!source || !target) continue;
+
+      const mOffset = multiEdgeOffsets.get(edge.id) || 0;
+      const { labelPosition } = calculateEdgePath(
+        source,
+        target,
+        edge.fromPort,
+        edge.toPort,
+        edge.routeType || 'curved',
+        edge.controlPoint,
+        undefined,
+        undefined,
+        mOffset
+      );
+      labeledEdges.push({ id: edge.id, x: labelPosition.x, y: labelPosition.y });
+    }
+
+    // Check pairwise collisions
+    for (let i = 0; i < labeledEdges.length; i++) {
+      for (let j = i + 1; j < labeledEdges.length; j++) {
+        const a = labeledEdges[i];
+        const b = labeledEdges[j];
+        const adjA = adjustments.get(a.id) || { x: 0, y: 0 };
+        const adjB = adjustments.get(b.id) || { x: 0, y: 0 };
+
+        const posXA = a.x + adjA.x;
+        const posYA = a.y + adjA.y;
+        const posXB = b.x + adjB.x;
+        const posYB = b.y + adjB.y;
+
+        const dx = Math.abs(posXA - posXB);
+        const dy = Math.abs(posYA - posYB);
+
+        // Typical label pill is ~70-130px wide and ~22-30px high
+        if (dx < 75 && dy < 28) {
+          // They overlap! Push them apart vertically
+          const shiftY = 16;
+          adjustments.set(a.id, { x: adjA.x, y: adjA.y - shiftY });
+          adjustments.set(b.id, { x: adjB.x, y: adjB.y + shiftY });
+        }
+      }
+    }
+
+    return adjustments;
+  }, [project.edges, project.nodes, multiEdgeOffsets]);
 
 
   // Track space key for panning, V/H for tool mode, M for mini-map, Ctrl+A for select all
@@ -250,6 +369,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         setToolMode('select');
       } else if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey) {
         setToolMode('hand');
+      } else if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
+        setToolMode((prev) => (prev === 'text' ? 'select' : 'text'));
       } else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) {
         setIsMiniMapOpen((prev) => !prev);
       }
@@ -353,11 +474,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     (screenX: number, screenY: number) => {
       if (!canvasRef.current) return { x: 0, y: 0 };
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = (screenX - rect.left - pan.x) / zoom;
-      const y = (screenY - rect.top - pan.y) / zoom;
+      const x = (screenX - rect.left - panRef.current.x) / zoomRef.current;
+      const y = (screenY - rect.top - panRef.current.y) / zoomRef.current;
       return { x, y };
     },
-    [canvasRef, pan, zoom]
+    [canvasRef]
   );
 
   // Snap to grid helper
@@ -369,7 +490,20 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   // Node Drag Start (Supports Single & Multi-Selection Dragging & Container Groups)
   const handleNodeDragStart = (nodeId: string, e: React.MouseEvent) => {
     if (isSpacePressed || resizing) return;
+
+    // Ignore interactive element clicks inside node (buttons, inputs, handles, ports)
+    const targetEl = e.target as HTMLElement;
+    if (
+      targetEl &&
+      targetEl.closest(
+        'input, textarea, button, select, [contenteditable="true"], .drafo-node-resize-handle, .drafo-port'
+      )
+    ) {
+      return;
+    }
+
     e.stopPropagation();
+    e.preventDefault();
 
     const proj = projectRef.current;
     const targetNode = proj.nodes.find((n) => n.id === nodeId);
@@ -443,11 +577,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     }
 
     const canvasPos = screenToCanvas(e.clientX, e.clientY);
-    setDragOffset({
+    const initialOffset = {
       x: canvasPos.x - targetNode.x,
       y: canvasPos.y - targetNode.y
-    });
-    setDraggingNodeId(nodeId);
+    };
+    dragOffsetRef.current = initialOffset;
+    setDragOffset(initialOffset);
+
+    // Record pending drag node; do NOT set draggingNodeId until cursor moves > 3px to avoid sticky clicks
+    pendingDragNodeIdRef.current = nodeId;
+
+    // Save full snapshot for undo/redo history and regression verification on release
+    dragSnapshotRef.current = JSON.parse(JSON.stringify(proj));
   };
 
   // Section Drag Start
@@ -516,6 +657,41 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       return;
     }
 
+    // Left click in Text mode places a new Text Annotation Node at the clicked canvas coordinate
+    if (e.button === 0 && toolMode === 'text') {
+      e.preventDefault();
+      const canvasPos = screenToCanvas(e.clientX, e.clientY);
+      const newTextNode: FlowNodeType = {
+        id: `node-${Date.now()}`,
+        type: 'text',
+        title: 'Text Annotation',
+        subtitle: '',
+        x: snap(canvasPos.x),
+        y: snap(canvasPos.y),
+        width: 200,
+        height: 48,
+        customData: {
+          fontSize: 16,
+          fontWeight: 'normal',
+          textAlign: 'left'
+        },
+        style: {
+          bg: 'transparent',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          borderRadius: 0,
+          colorPalette: 'slate'
+        }
+      };
+      onUpdateProject({
+        ...projectRef.current,
+        nodes: [...projectRef.current.nodes, newTextNode]
+      });
+      onSelect(newTextNode.id, 'node');
+      setToolMode('select');
+      return;
+    }
+
     // Panning is activated if in Hand mode, holding Space, middle-click, or holding Alt
     if (
       toolMode === 'hand' ||
@@ -525,7 +701,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     ) {
       e.preventDefault();
       setIsPanning(true);
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      const ps = { x: e.clientX - panRef.current.x, y: e.clientY - panRef.current.y };
+      panStartRef.current = ps;
+      setPanStart(ps);
     } else if (e.button === 0 && toolMode === 'select') {
       // Left click in Select mode activates Marquee Area Selection on empty canvas
       e.preventDefault();
@@ -545,11 +723,26 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   // Canvas Mouse Move (Dragging, Resizing, Connecting, Panning, Marquee)
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // Safety release: If no mouse button is held down (e.buttons === 0), cancel any drag immediately
+      if (e.buttons === 0) {
+        if (
+          draggingNodeIdRef.current ||
+          pendingDragNodeIdRef.current ||
+          isPanning ||
+          resizing ||
+          draggingWaypointRef.current ||
+          draggingEdgeEndpointRef.current
+        ) {
+          handleMouseUp(e);
+          return;
+        }
+      }
+
       // Panning
       if (isPanning) {
         onPanChange({
-          x: e.clientX - panStart.x,
-          y: e.clientY - panStart.y
+          x: e.clientX - panStartRef.current.x,
+          y: e.clientY - panStartRef.current.y
         });
         return;
       }
@@ -565,8 +758,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       // Resizing
       if (resizing) {
-        const dx = (e.clientX - resizing.startX) / zoom;
-        const dy = (e.clientY - resizing.startY) / zoom;
+        const dx = (e.clientX - resizing.startX) / zoomRef.current;
+        const dy = (e.clientY - resizing.startY) / zoomRef.current;
         const minW = 80;
         const minH = 60;
 
@@ -574,17 +767,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         let newY = resizing.initY;
         let newW = resizing.initWidth;
         let newH = resizing.initHeight;
+        const dimGrid = (project.canvasSettings.gridSize || 20) * 2;
 
         if (resizing.handle.includes('e')) {
-          newW = Math.max(minW, snap(resizing.initWidth + dx));
+          newW = Math.max(minW, snap(resizing.initWidth + dx, dimGrid));
         }
         if (resizing.handle.includes('s')) {
-          newH = Math.max(minH, snap(resizing.initHeight + dy));
+          newH = Math.max(minH, snap(resizing.initHeight + dy, dimGrid));
         }
         if (resizing.handle.includes('w')) {
           const possibleW = resizing.initWidth - dx;
           if (possibleW >= minW) {
-            newW = snap(possibleW);
+            newW = snap(possibleW, dimGrid);
             newX = snap(resizing.initX + dx);
           } else {
             newW = minW;
@@ -594,7 +788,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         if (resizing.handle.includes('n')) {
           const possibleH = resizing.initHeight - dy;
           if (possibleH >= minH) {
-            newH = snap(possibleH);
+            newH = snap(possibleH, dimGrid);
             newY = snap(resizing.initY + dy);
           } else {
             newH = minH;
@@ -602,15 +796,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
           }
         }
 
-        const updatedNodes = project.nodes.map((node) =>
+        const proj = projectRef.current;
+        const updatedNodes = proj.nodes.map((node) =>
           node.id === resizing.nodeId
             ? { ...node, x: newX, y: newY, width: newW, height: newH }
             : node
         );
-        onUpdateProject({ ...project, nodes: updatedNodes });
+        onUpdateProject({ ...proj, nodes: updatedNodes });
         return;
       }
 
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       const canvasPos = screenToCanvas(e.clientX, e.clientY);
 
       // Broadcast local cursor position to remote peers (throttled — skip during active node drag)
@@ -618,60 +814,216 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         collabEngine.setLocalCursor(canvasPos.x, canvasPos.y, selectedId);
       }
 
-      // Dragging Edge Waypoint / Connector Bending
+      // Dragging Edge Waypoint / Connector Bending with Smart Magnetic Snapping
       if (draggingWaypoint) {
-        const curX = Math.round(canvasPos.x);
-        const curY = Math.round(canvasPos.y);
         const proj = projectRef.current;
-        const updatedEdges = proj.edges.map((edge) =>
-          edge.id === draggingWaypoint.edgeId
-            ? { ...edge, controlPoint: { x: curX, y: curY } }
-            : edge
-        );
-        const liveUpdate = onUpdateProjectLive || onUpdateProject;
-        liveUpdate({ ...proj, edges: updatedEdges });
-        return;
+        const targetEdge = proj.edges.find((edge) => edge.id === draggingWaypoint.edgeId);
+        let curX = Math.round(canvasPos.x);
+        let curY = Math.round(canvasPos.y);
+
+        if (targetEdge) {
+          // If dragging a specific waypoint in the multi-waypoint list
+          if (draggingWaypoint.waypointIndex !== undefined) {
+            const currentWaypoints = targetEdge.waypoints
+              ? [...targetEdge.waypoints]
+              : targetEdge.controlPoint
+              ? [targetEdge.controlPoint]
+              : [];
+            currentWaypoints[draggingWaypoint.waypointIndex] = { x: curX, y: curY };
+            const updatedEdges = proj.edges.map((edge) =>
+              edge.id === draggingWaypoint.edgeId
+                ? {
+                    ...edge,
+                    waypoints: currentWaypoints,
+                    controlPoint: currentWaypoints[0]
+                  }
+                : edge
+            );
+            const liveUpdate = onUpdateProjectLive || onUpdateProject;
+            liveUpdate({ ...proj, edges: updatedEdges });
+            return;
+          }
+
+          const waypointGuides: AlignmentGuide[] = [];
+          const sNode = proj.nodes.find((n) => n.id === targetEdge.fromNodeId);
+          const tNode = proj.nodes.find((n) => n.id === targetEdge.toNodeId);
+          if (sNode && tNode) {
+            const p1 = getPortCoordinates(sNode, targetEdge.fromPort);
+            const p2 = getPortCoordinates(tNode, targetEdge.toPort);
+
+            const isH =
+              (targetEdge.fromPort === 'left' || targetEdge.fromPort === 'right') &&
+              (targetEdge.toPort === 'left' || targetEdge.toPort === 'right');
+            const isV =
+              (targetEdge.fromPort === 'top' || targetEdge.fromPort === 'bottom') &&
+              (targetEdge.toPort === 'top' || targetEdge.toPort === 'bottom');
+
+            const baseY = Math.round((p1.y + p2.y) / 2);
+            const baseX = Math.round((p1.x + p2.x) / 2);
+            const SNAP_MAG = 18;
+
+            if (isH) {
+              // 1. Magnetic snap to horizontal baseline Y
+              if (Math.abs(canvasPos.y - baseY) < SNAP_MAG) {
+                curY = baseY;
+                waypointGuides.push({
+                  type: 'horizontal',
+                  pos: baseY,
+                  start: Math.min(p1.x, p2.x) - 40,
+                  end: Math.max(p1.x, p2.x) + 40
+                });
+              } else if (Math.abs(canvasPos.y - p1.y) < SNAP_MAG) {
+                curY = p1.y;
+                waypointGuides.push({
+                  type: 'horizontal',
+                  pos: p1.y,
+                  start: Math.min(p1.x, p2.x) - 40,
+                  end: Math.max(p1.x, p2.x) + 40
+                });
+              } else if (Math.abs(canvasPos.y - p2.y) < SNAP_MAG) {
+                curY = p2.y;
+                waypointGuides.push({
+                  type: 'horizontal',
+                  pos: p2.y,
+                  start: Math.min(p1.x, p2.x) - 40,
+                  end: Math.max(p1.x, p2.x) + 40
+                });
+              }
+
+              // 2. Magnetic snap to midpoint X between ports
+              if (Math.abs(canvasPos.x - baseX) < SNAP_MAG) {
+                curX = baseX;
+                waypointGuides.push({
+                  type: 'vertical',
+                  pos: baseX,
+                  start: Math.min(p1.y, p2.y) - 40,
+                  end: Math.max(p1.y, p2.y) + 40
+                });
+              }
+            } else if (isV) {
+              // 1. Magnetic snap to vertical baseline X
+              if (Math.abs(canvasPos.x - baseX) < SNAP_MAG) {
+                curX = baseX;
+                waypointGuides.push({
+                  type: 'vertical',
+                  pos: baseX,
+                  start: Math.min(p1.y, p2.y) - 40,
+                  end: Math.max(p1.y, p2.y) + 40
+                });
+              } else if (Math.abs(canvasPos.x - p1.x) < SNAP_MAG) {
+                curX = p1.x;
+                waypointGuides.push({
+                  type: 'vertical',
+                  pos: p1.x,
+                  start: Math.min(p1.y, p2.y) - 40,
+                  end: Math.max(p1.y, p2.y) + 40
+                });
+              } else if (Math.abs(canvasPos.x - p2.x) < SNAP_MAG) {
+                curX = p2.x;
+                waypointGuides.push({
+                  type: 'vertical',
+                  pos: p2.x,
+                  start: Math.min(p1.y, p2.y) - 40,
+                  end: Math.max(p1.y, p2.y) + 40
+                });
+              }
+
+              // 2. Magnetic snap to midpoint Y between ports
+              if (Math.abs(canvasPos.y - baseY) < SNAP_MAG) {
+                curY = baseY;
+                waypointGuides.push({
+                  type: 'horizontal',
+                  pos: baseY,
+                  start: Math.min(p1.x, p2.x) - 40,
+                  end: Math.max(p1.x, p2.x) + 40
+                });
+              }
+            } else {
+              // Diagonal or mixed port route
+              const lineLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+              if (lineLen > 1) {
+                const t = Math.max(0, Math.min(1, ((canvasPos.x - p1.x) * (p2.x - p1.x) + (canvasPos.y - p1.y) * (p2.y - p1.y)) / (lineLen * lineLen)));
+                const projX = p1.x + t * (p2.x - p1.x);
+                const projY = p1.y + t * (p2.y - p1.y);
+                if (Math.hypot(canvasPos.x - projX, canvasPos.y - projY) < SNAP_MAG) {
+                  curX = Math.round(projX);
+                  curY = Math.round(projY);
+                }
+              }
+            }
+
+            setAlignmentGuides(waypointGuides);
+          }
+
+          const updatedEdges = proj.edges.map((edge) => {
+            if (edge.id !== draggingWaypoint.edgeId) return edge;
+            if (edge.waypoints && edge.waypoints.length > 0) {
+              const wps = [...edge.waypoints];
+              wps[0] = { x: curX, y: curY };
+              return { ...edge, waypoints: wps, controlPoint: { x: curX, y: curY } };
+            }
+            return { ...edge, controlPoint: { x: curX, y: curY } };
+          });
+          const liveUpdate = onUpdateProjectLive || onUpdateProject;
+          liveUpdate({ ...proj, edges: updatedEdges });
+          return;
+        }
       }
 
       // Track drag movement distance to distinguish a click from a drag
-      if (dragStartPosRef.current) {
+      if (pendingDragNodeIdRef.current && dragStartPosRef.current) {
         const dist = Math.hypot(
           e.clientX - dragStartPosRef.current.x,
           e.clientY - dragStartPosRef.current.y
         );
         if (dist > 3) {
           hasDraggedNodeRef.current = true;
+          if (draggingNodeIdRef.current !== pendingDragNodeIdRef.current) {
+            draggingNodeIdRef.current = pendingDragNodeIdRef.current;
+            setDraggingNodeId(pendingDragNodeIdRef.current);
+          }
         }
       }
 
-      // Node Dragging — uses position maps (no stale closure, no snapshot drift)
-      if (draggingNodeId) {
+      // Node Dragging — only moves when actually dragged past threshold with button held down
+      const activeDragNodeId = draggingNodeIdRef.current;
+      if (activeDragNodeId && hasDraggedNodeRef.current) {
         const proj = projectRef.current;
-        const initialPos = dragInitialPositionsRef.current.get(draggingNodeId);
+        const initialPos = dragInitialPositionsRef.current.get(activeDragNodeId);
         if (!initialPos) return;
 
-        const rawX = canvasPos.x - dragOffset.x;
-        const rawY = canvasPos.y - dragOffset.y;
+        const offset = dragOffsetRef.current;
+        const rawX = canvasPos.x - offset.x;
+        const rawY = canvasPos.y - offset.y;
 
         // Use the dragged node's current width/height from live project for snap calc
-        const draggedNode = proj.nodes.find((n) => n.id === draggingNodeId);
+        const draggedNode = proj.nodes.find((n) => n.id === activeDragNodeId);
         const width = draggedNode?.width ?? 160;
         const height = draggedNode?.height ?? 96;
 
-        let snappedX = rawX;
-        let snappedY = rawY;
-        const guides: AlignmentGuide[] = [];
+        // Default grid snap: locks node center & connection ports directly onto canvas dot grid
+        const baseGrid = project.canvasSettings.gridSize || 20;
+        const shouldGridSnap = project.canvasSettings.snapToGrid && !e.altKey;
+        const centerGridX = Math.round((rawX + width / 2) / baseGrid) * baseGrid;
+        const centerGridY = Math.round((rawY + height / 2) / baseGrid) * baseGrid;
+        const defaultGridX = shouldGridSnap ? centerGridX - width / 2 : Math.round(rawX);
+        const defaultGridY = shouldGridSnap ? centerGridY - height / 2 : Math.round(rawY);
 
-        // Use Set from ref — O(1) lookups
-        const selectedSet = selectedSetRef.current;
-        const activeSet = selectedSet.has(draggingNodeId) ? selectedSet : new Set([draggingNodeId]);
+        // Smart Magnetic Guides (subtle, Figma-grade: 6px threshold scaled by zoom)
+        const SNAP_THRESHOLD = Math.max(4, Math.min(8, 6 / zoom));
+        const activeSet = selectedSetRef.current.has(activeDragNodeId)
+          ? selectedSetRef.current
+          : new Set([activeDragNodeId]);
 
-        // Alignment guides test against nodes outside the selected group
         const otherNodes = proj.nodes.filter((n) => !activeSet.has(n.id));
-        const SNAP_THRESHOLD = 8;
 
-        let snappedH = false;
-        let snappedV = false;
+        const currMidX = rawX + width / 2;
+        const currRight = rawX + width;
+        const currMidY = rawY + height / 2;
+        const currBottom = rawY + height;
+
+        let bestSnapX: { val: number; dist: number; guide: AlignmentGuide } | null = null;
+        let bestSnapY: { val: number; dist: number; guide: AlignmentGuide } | null = null;
 
         for (const other of otherNodes) {
           const otherMidX = other.x + other.width / 2;
@@ -679,86 +1031,161 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
           const otherMidY = other.y + other.height / 2;
           const otherBottom = other.y + other.height;
 
-          const currMidX = rawX + width / 2;
-          const currRight = rawX + width;
-          const currMidY = rawY + height / 2;
-          const currBottom = rawY + height;
+          // 1. Direct Port-to-Port collinear alignment (only on the relevant axis!)
+          const connectedEdges = proj.edges.filter(
+            (ed) =>
+              (ed.fromNodeId === activeDragNodeId && ed.toNodeId === other.id) ||
+              (ed.toNodeId === activeDragNodeId && ed.fromNodeId === other.id)
+          );
 
-          // X-Axis Alignments (Vertical Guides)
-          if (!snappedV) {
-            if (Math.abs(currMidX - otherMidX) < SNAP_THRESHOLD) {
-              snappedX = otherMidX - width / 2;
-              snappedV = true;
-              guides.push({
-                type: 'vertical',
-                pos: otherMidX,
-                start: Math.min(rawY, other.y) - 40,
-                end: Math.max(rawY + height, otherBottom) + 40
-              });
-            } else if (Math.abs(rawX - other.x) < SNAP_THRESHOLD) {
-              snappedX = other.x;
-              snappedV = true;
-              guides.push({
-                type: 'vertical',
-                pos: other.x,
-                start: Math.min(rawY, other.y) - 40,
-                end: Math.max(rawY + height, otherBottom) + 40
-              });
-            } else if (Math.abs(currRight - otherRight) < SNAP_THRESHOLD) {
-              snappedX = otherRight - width;
-              snappedV = true;
-              guides.push({
-                type: 'vertical',
-                pos: otherRight,
-                start: Math.min(rawY, other.y) - 40,
-                end: Math.max(rawY + height, otherBottom) + 40
-              });
+          for (const edge of connectedEdges) {
+            const isDragSource = edge.fromNodeId === activeDragNodeId;
+            const dragPort = isDragSource ? edge.fromPort : edge.toPort;
+            const otherPort = isDragSource ? edge.toPort : edge.fromPort;
+            const otherPortCoord = getPortCoordinates(other, otherPort);
+
+            // Horizontal connection: snap Y to make the connector line straight
+            if (
+              (dragPort === 'left' && otherPort === 'right') ||
+              (dragPort === 'right' && otherPort === 'left')
+            ) {
+              const idealY = otherPortCoord.y - height / 2;
+              const distY = Math.abs(rawY - idealY);
+              if (distY <= SNAP_THRESHOLD && (!bestSnapY || distY < bestSnapY.dist)) {
+                bestSnapY = {
+                  val: idealY,
+                  dist: distY,
+                  guide: {
+                    type: 'horizontal',
+                    pos: otherPortCoord.y,
+                    start: Math.min(rawX, other.x) - 30,
+                    end: Math.max(currRight, otherRight) + 30
+                  }
+                };
+              }
+            }
+
+            // Vertical connection: snap X to make the connector line straight
+            if (
+              (dragPort === 'top' && otherPort === 'bottom') ||
+              (dragPort === 'bottom' && otherPort === 'top')
+            ) {
+              const idealX = otherPortCoord.x - width / 2;
+              const distX = Math.abs(rawX - idealX);
+              if (distX <= SNAP_THRESHOLD && (!bestSnapX || distX < bestSnapX.dist)) {
+                bestSnapX = {
+                  val: idealX,
+                  dist: distX,
+                  guide: {
+                    type: 'vertical',
+                    pos: otherPortCoord.x,
+                    start: Math.min(rawY, other.y) - 30,
+                    end: Math.max(currBottom, otherBottom) + 30
+                  }
+                };
+              }
             }
           }
 
-          // Y-Axis Alignments (Horizontal Guides)
-          if (!snappedH) {
-            if (Math.abs(currMidY - otherMidY) < SNAP_THRESHOLD) {
-              snappedY = otherMidY - height / 2;
-              snappedH = true;
-              guides.push({
+          // 2. Center-to-Center Alignment (Figma standard)
+          const distMidX = Math.abs(currMidX - otherMidX);
+          if (distMidX <= SNAP_THRESHOLD && (!bestSnapX || distMidX < bestSnapX.dist)) {
+            bestSnapX = {
+              val: otherMidX - width / 2,
+              dist: distMidX,
+              guide: {
+                type: 'vertical',
+                pos: otherMidX,
+                start: Math.min(rawY, other.y) - 30,
+                end: Math.max(currBottom, otherBottom) + 30
+              }
+            };
+          }
+
+          const distMidY = Math.abs(currMidY - otherMidY);
+          if (distMidY <= SNAP_THRESHOLD && (!bestSnapY || distMidY < bestSnapY.dist)) {
+            bestSnapY = {
+              val: otherMidY - height / 2,
+              dist: distMidY,
+              guide: {
                 type: 'horizontal',
                 pos: otherMidY,
-                start: Math.min(rawX, other.x) - 40,
-                end: Math.max(rawX + width, otherRight) + 40
-              });
-            } else if (Math.abs(rawY - other.y) < SNAP_THRESHOLD) {
-              snappedY = other.y;
-              snappedH = true;
-              guides.push({
+                start: Math.min(rawX, other.x) - 30,
+                end: Math.max(currRight, otherRight) + 30
+              }
+            };
+          }
+
+          // 3. Left-to-Left / Right-to-Right Edge Alignments
+          const distLeft = Math.abs(rawX - other.x);
+          if (distLeft <= SNAP_THRESHOLD && (!bestSnapX || distLeft < bestSnapX.dist)) {
+            bestSnapX = {
+              val: other.x,
+              dist: distLeft,
+              guide: {
+                type: 'vertical',
+                pos: other.x,
+                start: Math.min(rawY, other.y) - 30,
+                end: Math.max(currBottom, otherBottom) + 30
+              }
+            };
+          }
+
+          const distRight = Math.abs(currRight - otherRight);
+          if (distRight <= SNAP_THRESHOLD && (!bestSnapX || distRight < bestSnapX.dist)) {
+            bestSnapX = {
+              val: otherRight - width,
+              dist: distRight,
+              guide: {
+                type: 'vertical',
+                pos: otherRight,
+                start: Math.min(rawY, other.y) - 30,
+                end: Math.max(currBottom, otherBottom) + 30
+              }
+            };
+          }
+
+          // 4. Top-to-Top / Bottom-to-Bottom Edge Alignments
+          const distTop = Math.abs(rawY - other.y);
+          if (distTop <= SNAP_THRESHOLD && (!bestSnapY || distTop < bestSnapY.dist)) {
+            bestSnapY = {
+              val: other.y,
+              dist: distTop,
+              guide: {
                 type: 'horizontal',
                 pos: other.y,
-                start: Math.min(rawX, other.x) - 40,
-                end: Math.max(rawX + width, otherRight) + 40
-              });
-            } else if (Math.abs(currBottom - otherBottom) < SNAP_THRESHOLD) {
-              snappedY = otherBottom - height;
-              snappedH = true;
-              guides.push({
+                start: Math.min(rawX, other.x) - 30,
+                end: Math.max(currRight, otherRight) + 30
+              }
+            };
+          }
+
+          const distBottom = Math.abs(currBottom - otherBottom);
+          if (distBottom <= SNAP_THRESHOLD && (!bestSnapY || distBottom < bestSnapY.dist)) {
+            bestSnapY = {
+              val: otherBottom - height,
+              dist: distBottom,
+              guide: {
                 type: 'horizontal',
                 pos: otherBottom,
-                start: Math.min(rawX, other.x) - 40,
-                end: Math.max(rawX + width, otherRight) + 40
-              });
-            }
+                start: Math.min(rawX, other.x) - 30,
+                end: Math.max(currRight, otherRight) + 30
+              }
+            };
           }
         }
 
-        const finalX = snappedV ? Math.round(snappedX) : snap(snappedX);
-        const finalY = snappedH ? Math.round(snappedY) : snap(snappedY);
+        const finalX = bestSnapX ? Math.round(bestSnapX.val) : defaultGridX;
+        const finalY = bestSnapY ? Math.round(bestSnapY.val) : defaultGridY;
 
+        const guides: AlignmentGuide[] = [];
+        if (bestSnapX) guides.push(bestSnapX.guide);
+        if (bestSnapY) guides.push(bestSnapY.guide);
         setAlignmentGuides(guides);
 
-        // Delta from initial position (no drift — always computed from snapshot)
-        const deltaX = finalX - initialPos.x;
-        const deltaY = finalY - initialPos.y;
+        const deltaX = Math.round(finalX - initialPos.x);
+        const deltaY = Math.round(finalY - initialPos.y);
 
-        // Zero-delta guard: skip map+setState entirely when mouse hasn't crossed a grid boundary
         if (deltaX === 0 && deltaY === 0) return;
 
         const liveUpdate = onUpdateProjectLive || onUpdateProject;
@@ -783,15 +1210,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         });
 
         liveUpdate({ ...proj, nodes: updatedNodes, edges: updatedEdges });
+        return;
       }
 
-      if (draggingSectionId) {
+      if (draggingSectionIdRef.current) {
         const proj = projectRef.current;
-        const newX = snap(canvasPos.x - dragOffset.x);
-        const newY = snap(canvasPos.y - dragOffset.y);
+        const sOffset = dragOffsetRef.current;
+        const newX = snap(canvasPos.x - sOffset.x);
+        const newY = snap(canvasPos.y - sOffset.y);
 
         const updatedSections = proj.sections.map((section) =>
-          section.id === draggingSectionId ? { ...section, x: newX, y: newY } : section
+          section.id === draggingSectionIdRef.current ? { ...section, x: newX, y: newY } : section
         );
         const liveUpdate = onUpdateProjectLive || onUpdateProject;
         liveUpdate({ ...proj, sections: updatedSections });
@@ -875,21 +1304,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     },
     [
       isPanning,
-      panStart,
-      onPanChange,
       selectionBox,
       resizing,
-      zoom,
       screenToCanvas,
-      draggingNodeId,
-      draggingSectionId,
-      dragOffset,
       onUpdateProject,
       onUpdateProjectLive,
       connecting,
       draggingWaypoint,
       draggingEdgeEndpoint,
-      selectedId
+      selectedId,
+      onPanChange
     ]
   );
 
@@ -897,6 +1321,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
       setIsPanning(false);
+      isPanningRef.current = false;
+
+      const wasDraggingNode = hasDraggedNodeRef.current && (draggingNodeIdRef.current !== null || draggingNodeId !== null);
+      const draggedNodeId = draggingNodeIdRef.current || draggingNodeId;
+
+      pendingDragNodeIdRef.current = null;
+      draggingNodeIdRef.current = null;
       setDraggingNodeId(null);
       setContainerChildrenIds([]);
       setDraggingSectionId(null);
@@ -909,8 +1340,87 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       if (resizing) {
         setResizing(null);
+        resizingRef.current = null;
       }
+
+      // 1. Commit dragged node state with collinear edge cleanups
+      if (wasDraggingNode && draggedNodeId) {
+        const proj = projectRef.current;
+        const updatedEdges = proj.edges.map((edge) => {
+          if (!edge.controlPoint) return edge;
+          if (edge.fromNodeId !== draggedNodeId && edge.toNodeId !== draggedNodeId) return edge;
+          const sNode = proj.nodes.find((n) => n.id === edge.fromNodeId);
+          const tNode = proj.nodes.find((n) => n.id === edge.toNodeId);
+          if (!sNode || !tNode) return edge;
+          const p1 = getPortCoordinates(sNode, edge.fromPort);
+          const p2 = getPortCoordinates(tNode, edge.toPort);
+          const isCollinearH = Math.abs(p1.y - p2.y) <= 8;
+          const isCollinearV = Math.abs(p1.x - p2.x) <= 8;
+          if (isCollinearH && Math.abs(edge.controlPoint.y - p2.y) <= 12) {
+            return { ...edge, controlPoint: undefined };
+          }
+          if (isCollinearV && Math.abs(edge.controlPoint.x - p2.x) <= 12) {
+            return { ...edge, controlPoint: undefined };
+          }
+          return edge;
+        });
+
+        const finalProj = { ...proj, edges: updatedEdges };
+        const snap = dragSnapshotRef.current;
+        const hasChanged =
+          !snap ||
+          JSON.stringify(snap.nodes) !== JSON.stringify(finalProj.nodes) ||
+          JSON.stringify(snap.edges) !== JSON.stringify(finalProj.edges);
+
+        if (hasChanged) {
+          onUpdateProject(finalProj);
+        }
+        dragSnapshotRef.current = null;
+      }
+
       if (draggingWaypointRef.current) {
+        const activeEdgeId = draggingWaypointRef.current.edgeId;
+        const proj = projectRef.current;
+        const edge = proj.edges.find((e) => e.id === activeEdgeId);
+        if (edge?.controlPoint) {
+          const sNode = proj.nodes.find((n) => n.id === edge.fromNodeId);
+          const tNode = proj.nodes.find((n) => n.id === edge.toNodeId);
+          if (sNode && tNode) {
+            const p1 = getPortCoordinates(sNode, edge.fromPort);
+            const p2 = getPortCoordinates(tNode, edge.toPort);
+            const isH =
+              (edge.fromPort === 'left' || edge.fromPort === 'right') &&
+              (edge.toPort === 'left' || edge.toPort === 'right');
+            const isV =
+              (edge.fromPort === 'top' || edge.fromPort === 'bottom') &&
+              (edge.toPort === 'top' || edge.toPort === 'bottom');
+            const baseY = Math.round((p1.y + p2.y) / 2);
+            const baseX = Math.round((p1.x + p2.x) / 2);
+
+            let shouldReset = false;
+            if (
+              isH &&
+              (Math.abs(edge.controlPoint.y - baseY) <= 14 ||
+                Math.abs(edge.controlPoint.y - p2.y) <= 14 ||
+                Math.abs(edge.controlPoint.y - p1.y) <= 14)
+            ) {
+              shouldReset = true;
+            } else if (
+              isV &&
+              (Math.abs(edge.controlPoint.x - baseX) <= 14 ||
+                Math.abs(edge.controlPoint.x - p2.x) <= 14 ||
+                Math.abs(edge.controlPoint.x - p1.x) <= 14)
+            ) {
+              shouldReset = true;
+            }
+            if (shouldReset) {
+              const updatedEdges = proj.edges.map((e) =>
+                e.id === activeEdgeId ? { ...e, controlPoint: undefined } : e
+              );
+              onUpdateProject({ ...proj, edges: updatedEdges });
+            }
+          }
+        }
         setDraggingWaypoint(null);
       }
 
@@ -1108,47 +1618,69 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     ]
   );
 
-  // Global Window-Level Drag and Release Capture (Guarantees smooth tracking and no stuck drag states)
+  const handleMouseMoveRef = useRef(handleMouseMove);
+  handleMouseMoveRef.current = handleMouseMove;
+  const handleMouseUpRef = useRef(handleMouseUp);
+  handleMouseUpRef.current = handleMouseUp;
+
+  // Global Window-Level Drag and Release Capture (Permanent event listener with capture: true & e.buttons safety)
   useEffect(() => {
-    const isDragging =
-      draggingWaypoint !== null ||
-      draggingEdgeEndpoint !== null ||
-      draggingNodeId !== null ||
-      draggingSectionId !== null ||
-      resizing !== null ||
-      connecting !== null ||
-      isPanning ||
-      selectionBox !== null;
-
-    if (!isDragging) return;
-
     const handleWindowMouseMove = (e: MouseEvent) => {
-      handleMouseMove(e as unknown as React.MouseEvent);
+      // Safety net: if mouse buttons are 0 (no button pressed), we cannot be dragging!
+      if (e.buttons === 0) {
+        if (
+          draggingNodeIdRef.current ||
+          pendingDragNodeIdRef.current ||
+          isPanningRef.current ||
+          resizingRef.current ||
+          draggingWaypointRef.current ||
+          draggingEdgeEndpointRef.current ||
+          connectingRef.current
+        ) {
+          handleMouseUpRef.current(e as unknown as React.MouseEvent);
+          return;
+        }
+      }
+
+      if (
+        draggingNodeIdRef.current ||
+        pendingDragNodeIdRef.current ||
+        isPanningRef.current ||
+        resizingRef.current ||
+        draggingWaypointRef.current ||
+        draggingEdgeEndpointRef.current ||
+        connectingRef.current ||
+        selectionBoxRef.current ||
+        dragStartPosRef.current
+      ) {
+        handleMouseMoveRef.current(e as unknown as React.MouseEvent);
+      }
     };
 
     const handleWindowMouseUp = (e: MouseEvent) => {
-      handleMouseUp(e as unknown as React.MouseEvent);
+      if (
+        draggingNodeIdRef.current ||
+        pendingDragNodeIdRef.current ||
+        isPanningRef.current ||
+        resizingRef.current ||
+        draggingWaypointRef.current ||
+        draggingEdgeEndpointRef.current ||
+        connectingRef.current ||
+        selectionBoxRef.current ||
+        dragStartPosRef.current
+      ) {
+        handleMouseUpRef.current(e as unknown as React.MouseEvent);
+      }
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove, { passive: false });
-    window.addEventListener('mouseup', handleWindowMouseUp);
+    window.addEventListener('mouseup', handleWindowMouseUp, { capture: true });
 
     return () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
-      window.removeEventListener('mouseup', handleWindowMouseUp);
+      window.removeEventListener('mouseup', handleWindowMouseUp, { capture: true });
     };
-  }, [
-    draggingWaypoint,
-    draggingEdgeEndpoint,
-    draggingNodeId,
-    draggingSectionId,
-    resizing,
-    connecting,
-    isPanning,
-    selectionBox,
-    handleMouseMove,
-    handleMouseUp
-  ]);
+  }, []);
 
   // Drag over handler for HTML5 drag-and-drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -1159,6 +1691,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   // Drop handler
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+
+    // Handle dropped file (e.g. .sql, .json, .mmd, .puml, .ts)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      if (onDropFile) {
+        onDropFile(e.dataTransfer.files[0]);
+        return;
+      }
+    }
+
     const rawData = e.dataTransfer.getData('application/drafo-node');
     const rawType = e.dataTransfer.getData('application/drafo-node-type');
 
@@ -1239,18 +1780,257 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     onSelect(nodeId, 'node', isMulti);
   }, [onSelect]);
   const handleStartDragWaypoint = useCallback(
-    (edgeId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (edgeId: string, waypointIndex?: number, e?: React.MouseEvent) => {
+      e?.stopPropagation();
       dragSnapshotRef.current = projectRef.current;
-      const canvasPos = screenToCanvas(e.clientX, e.clientY);
+      const clientX = e ? e.clientX : window.innerWidth / 2;
+      const clientY = e ? e.clientY : window.innerHeight / 2;
+      const canvasPos = screenToCanvas(clientX, clientY);
       setDraggingWaypoint({
         edgeId,
+        waypointIndex,
         startX: canvasPos.x,
         startY: canvasPos.y
       });
     },
     [screenToCanvas]
   );
+
+  const handleAddWaypoint = useCallback(
+    (edgeId: string, point?: { x: number; y: number }) => {
+      const proj = projectRef.current;
+      const edge = proj.edges.find((e) => e.id === edgeId);
+      if (!edge) return;
+
+      let insertPoint = point;
+      if (!insertPoint) {
+        const sourceNode = proj.nodes.find((n) => n.id === edge.fromNodeId);
+        const targetNode = proj.nodes.find((n) => n.id === edge.toNodeId);
+        if (sourceNode && targetNode) {
+          const { labelPosition } = calculateEdgePath(
+            sourceNode,
+            targetNode,
+            edge.fromPort,
+            edge.toPort,
+            edge.routeType,
+            edge.controlPoint,
+            undefined,
+            undefined,
+            undefined,
+            edge.waypoints
+          );
+          insertPoint = { x: labelPosition.x, y: labelPosition.y };
+        } else {
+          insertPoint = { x: 0, y: 0 };
+        }
+      }
+
+      const existing = edge.waypoints
+        ? [...edge.waypoints]
+        : edge.controlPoint
+        ? [edge.controlPoint]
+        : [];
+      const newWaypoints = [
+        ...existing,
+        { x: Math.round(insertPoint.x), y: Math.round(insertPoint.y) }
+      ];
+
+      const updatedEdges = proj.edges.map((e) =>
+        e.id === edgeId ? { ...e, waypoints: newWaypoints, controlPoint: newWaypoints[0] } : e
+      );
+      onUpdateProject({ ...proj, edges: updatedEdges });
+    },
+    [onUpdateProject]
+  );
+
+  const handleDeleteWaypoint = useCallback(
+    (edgeId: string, waypointIndex: number) => {
+      const proj = projectRef.current;
+      const edge = proj.edges.find((e) => e.id === edgeId);
+      if (!edge) return;
+
+      const existing = edge.waypoints
+        ? [...edge.waypoints]
+        : edge.controlPoint
+        ? [edge.controlPoint]
+        : [];
+      const newWaypoints = existing.filter((_, idx) => idx !== waypointIndex);
+
+      const updatedEdges = proj.edges.map((e) =>
+        e.id === edgeId
+          ? {
+              ...e,
+              waypoints: newWaypoints.length > 0 ? newWaypoints : undefined,
+              controlPoint: newWaypoints.length > 0 ? newWaypoints[0] : undefined
+            }
+          : e
+      );
+      onUpdateProject({ ...proj, edges: updatedEdges });
+    },
+    [onUpdateProject]
+  );
+
+  // Smart Universal Clipboard Paste Listener (Image, URL Link Preview, or Plain Text)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const canvasEl = canvasRef.current;
+      const rect = canvasEl
+        ? canvasEl.getBoundingClientRect()
+        : { left: 0, top: 0, width: 1280, height: 800 };
+      const clientX = lastMousePosRef.current ? lastMousePosRef.current.x : rect.left + rect.width / 2;
+      const clientY = lastMousePosRef.current ? lastMousePosRef.current.y : rect.top + rect.height / 2;
+      const canvasPos = screenToCanvas(clientX, clientY);
+
+      // 1. Image in clipboard
+      const items = Array.from(clipboardData.items);
+      const imageItem = items.find((item) => item.type.startsWith('image/'));
+      if (imageItem) {
+        e.preventDefault();
+        const file = imageItem.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (loadEvt) => {
+            const dataUrl = loadEvt.target?.result as string;
+            if (dataUrl) {
+              const img = new window.Image();
+              img.onload = () => {
+                const maxDim = 400;
+                let w = img.width || 280;
+                let h = img.height || 200;
+                if (w > maxDim || h > maxDim) {
+                  if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                  } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                  }
+                }
+
+                const newImgNode: FlowNodeType = {
+                  id: `node-${Date.now()}`,
+                  type: 'image',
+                  title: file.name ? file.name.replace(/\.[^/.]+$/, '') : 'Pasted Image',
+                  subtitle: '',
+                  x: snap(canvasPos.x - w / 2),
+                  y: snap(canvasPos.y - h / 2),
+                  width: Math.max(w, 140),
+                  height: Math.max(h, 100),
+                  customData: {
+                    imageUrl: dataUrl
+                  },
+                  style: {
+                    bg: 'transparent',
+                    borderColor: '#E2E8F0',
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    colorPalette: 'slate'
+                  }
+                };
+
+                const proj = projectRef.current;
+                onUpdateProject({ ...proj, nodes: [...proj.nodes, newImgNode] });
+                onSelect(newImgNode.id, 'node');
+              };
+              img.src = dataUrl;
+            }
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
+
+      // 2. Text / URL in clipboard
+      const text = clipboardData.getData('text/plain')?.trim();
+      if (!text) return;
+
+      const isUrl = /^https?:\/\/[^\s$.?#].[^\s]*$/i.test(text);
+      if (isUrl) {
+        e.preventDefault();
+        let domain = '';
+        try {
+          domain = new URL(text).hostname.replace(/^www\./, '');
+        } catch {
+          domain = text;
+        }
+
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+        const newLinkNode: FlowNodeType = {
+          id: `node-${Date.now()}`,
+          type: 'link-embed',
+          title: domain,
+          subtitle: text,
+          x: snap(canvasPos.x - 140),
+          y: snap(canvasPos.y - 45),
+          width: 280,
+          height: 90,
+          customData: {
+            linkUrl: text,
+            linkTitle: domain,
+            linkDescription: text,
+            linkFavicon: faviconUrl
+          },
+          style: {
+            bg: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            borderWidth: 1,
+            borderRadius: 12,
+            colorPalette: 'blue'
+          }
+        };
+
+        const proj = projectRef.current;
+        onUpdateProject({ ...proj, nodes: [...proj.nodes, newLinkNode] });
+        onSelect(newLinkNode.id, 'node');
+        return;
+      }
+
+      // 3. Plain text
+      e.preventDefault();
+      const newTextNode: FlowNodeType = {
+        id: `node-${Date.now()}`,
+        type: 'text',
+        title: text,
+        subtitle: '',
+        x: snap(canvasPos.x - 100),
+        y: snap(canvasPos.y - 25),
+        width: Math.min(Math.max(text.length * 9, 160), 380),
+        height: Math.max(Math.ceil(text.length / 30) * 24 + 20, 50),
+        customData: {
+          fontSize: 15,
+          fontWeight: 'normal',
+          textAlign: 'left'
+        },
+        style: {
+          bg: 'transparent',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          borderRadius: 0,
+          colorPalette: 'slate'
+        }
+      };
+
+      const proj = projectRef.current;
+      onUpdateProject({ ...proj, nodes: [...proj.nodes, newTextNode] });
+      onSelect(newTextNode.id, 'node');
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [screenToCanvas, onUpdateProject, onSelect]);
 
   const handleStartDragEndpoint = useCallback(
     (edgeId: string, endpoint: 'source' | 'target', e: React.MouseEvent) => {
@@ -1486,6 +2266,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             const activeDragPos =
               dragEndpointPos?.edgeId === edge.id ? dragEndpointPos : null;
 
+            const multiOffset = multiEdgeOffsets.get(edge.id);
+            const labelAdj = labelCollisionAdjustments.get(edge.id);
+
             return (
               <FlowEdgeMemo
                 key={edge.id}
@@ -1495,12 +2278,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 isSelected={selectedType === 'edge' && selectedId === edge.id}
                 isSimActive={isSimActive}
                 dragEndpointPos={activeDragPos}
+                multiEdgeOffset={multiOffset}
+                labelOffset={labelAdj}
                 onSelect={(id, e) => {
                   e.stopPropagation();
                   onSelect(id, 'edge');
                 }}
                 onUpdate={handleUpdateEdge}
                 onStartDragWaypoint={handleStartDragWaypoint}
+                onAddWaypoint={handleAddWaypoint}
                 onStartDragEndpoint={handleStartDragEndpoint}
                 onDelete={(edgeId) => {
                   const proj = projectRef.current;
@@ -1524,12 +2310,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 const norm1 = getPortNormal(connecting.fromPort);
                 const norm2 = magneticTarget ? getPortNormal(magneticTarget.port) : null;
                 const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                const stubLen = norm2 ? Math.max(0, Math.min(14, dist * 0.25)) : 0;
+                const p2Entry = stubLen > 1 ? { x: p2.x + norm2!.x * stubLen, y: p2.y + norm2!.y * stubLen } : p2;
                 const offset = Math.max(28, Math.min(dist * 0.45, 160));
                 const cp1 = { x: p1.x + norm1.x * offset, y: p1.y + norm1.y * offset };
                 const cp2 = norm2
-                  ? { x: p2.x + norm2.x * offset, y: p2.y + norm2.y * offset }
+                  ? { x: p2Entry.x + norm2.x * offset, y: p2Entry.y + norm2.y * offset }
                   : { x: p2.x - norm1.x * (offset * 0.4), y: p2.y - norm1.y * (offset * 0.4) };
-                const previewPath = `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`;
+                const previewPath = stubLen > 1
+                  ? `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2Entry.x} ${p2Entry.y} L ${p2.x} ${p2.y}`
+                  : `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`;
 
                 return (
                   <>
@@ -1540,6 +2330,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                       strokeWidth={2}
                       strokeDasharray="6,4"
                       markerEnd="url(#marker-arrow-2563EB)"
+                      strokeLinecap="butt"
                       className="drafo-connecting-path"
                     />
                     {magneticTarget && (
@@ -1604,26 +2395,46 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                       height={boxH}
                       className="drafo-marquee-rect"
                     />
-                    {boxW > 50 && boxH > 25 && count > 0 && (
-                      <g transform={`translate(${minX + 8}, ${minY + 18})`}>
-                        <rect
-                          x={-4}
-                          y={-12}
-                          width={74}
-                          height={18}
-                          rx={4}
-                          fill="#2563EB"
-                        />
-                        <text
-                          fill="#FFFFFF"
-                          fontSize="10"
-                          fontWeight="700"
-                          dominantBaseline="middle"
-                        >
-                          {count} selected
-                        </text>
-                      </g>
-                    )}
+                    {boxW > 50 && boxH > 25 && count > 0 && (() => {
+                      const label = `${count} selected`;
+                      // Approximate character width for 11px semi-bold font (6.4px per char)
+                      const textWidth = Math.max(52, Math.ceil(label.length * 6.6));
+                      const badgeW = textWidth + 20;
+                      const badgeH = 22;
+
+                      return (
+                        <g transform={`translate(${minX + 8}, ${minY + 12})`}>
+                          <rect
+                            x={0}
+                            y={0}
+                            width={badgeW}
+                            height={badgeH}
+                            rx={badgeH / 2}
+                            fill="#2563EB"
+                            style={{
+                              filter: 'drop-shadow(0 2px 4px rgba(37, 99, 235, 0.3))'
+                            }}
+                          />
+                          <text
+                            x={badgeW / 2}
+                            y={badgeH / 2}
+                            fill="#FFFFFF"
+                            fontSize="11"
+                            fontWeight="600"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            style={{
+                              fontFamily: 'var(--font-family-base), system-ui, -apple-system, sans-serif',
+                              letterSpacing: '0.01em',
+                              userSelect: 'none',
+                              pointerEvents: 'none'
+                            }}
+                          >
+                            {label}
+                          </text>
+                        </g>
+                      );
+                    })()}
                   </>
                 );
               })()}
@@ -1719,7 +2530,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
             const targetOverride =
               activeDragPos?.endpoint === 'target' ? activeDragPos.point : undefined;
 
-            const { sourcePoint, targetPoint, labelPosition, waypointPosition } = calculateEdgePath(
+            const { sourcePoint, targetPoint, labelPosition, waypointPosition, waypointPositions } = calculateEdgePath(
               sourceNode,
               targetNode,
               selectedEdge.fromPort,
@@ -1727,7 +2538,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
               selectedEdge.routeType,
               selectedEdge.controlPoint,
               sourceOverride,
-              targetOverride
+              targetOverride,
+              undefined,
+              selectedEdge.waypoints
             );
 
             return (
@@ -1737,14 +2550,25 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 targetPoint={targetPoint}
                 labelPosition={labelPosition}
                 waypointPosition={waypointPosition}
+                waypointPositions={waypointPositions}
                 onStartDragEndpoint={handleStartDragEndpoint}
                 onStartDragWaypoint={handleStartDragWaypoint}
+                onAddWaypoint={handleAddWaypoint}
+                onDeleteWaypoint={handleDeleteWaypoint}
                 onResetWaypoint={(edgeId) => {
                   const proj = projectRef.current;
                   const updated = proj.edges.map((e) =>
-                    e.id === edgeId ? { ...e, controlPoint: undefined } : e
+                    e.id === edgeId ? { ...e, controlPoint: undefined, waypoints: undefined } : e
                   );
                   onUpdateProject({ ...proj, edges: updated });
+                }}
+                onUpdate={handleUpdateEdge}
+                onDelete={(edgeId) => {
+                  const proj = projectRef.current;
+                  onUpdateProject({
+                    ...proj,
+                    edges: proj.edges.filter((e) => e.id !== edgeId)
+                  });
                 }}
               />
             );
@@ -1784,17 +2608,27 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       {/* FLOATING NAVIGATION HUD (Tools, Zoom, Undo/Redo & Simulation) */}
       <div className="drafo-canvas-floating-hud">
-        {/* Single Smart Tool Mode Toggle: Cursor (Select) <-> Hand / Thumb (Pan) */}
+        {/* Tool Mode Buttons: Select (V), Hand (H), Text Annotation (T) */}
         <button
-          className="drafo-hud-btn"
-          onClick={() => setToolMode((prev) => (prev === 'select' ? 'hand' : 'select'))}
-          title={
-            toolMode === 'select'
-              ? 'Cursor Tool (Click or press H to switch to Hand Pan)'
-              : 'Hand Pan Tool (Click or press V to switch to Cursor Select)'
-          }
+          className={`drafo-hud-btn ${toolMode === 'select' ? 'active' : ''}`}
+          onClick={() => setToolMode('select')}
+          title="Cursor Select Tool (V)"
         >
-          {toolMode === 'select' ? <MousePointer size={15} /> : <Hand size={15} />}
+          <MousePointer size={15} />
+        </button>
+        <button
+          className={`drafo-hud-btn ${toolMode === 'hand' ? 'active' : ''}`}
+          onClick={() => setToolMode('hand')}
+          title="Hand Pan Tool (H)"
+        >
+          <Hand size={15} />
+        </button>
+        <button
+          className={`drafo-hud-btn ${toolMode === 'text' ? 'active' : ''}`}
+          onClick={() => setToolMode((prev) => (prev === 'text' ? 'select' : 'text'))}
+          title="Text Annotation Tool (T) - Click anywhere on canvas to place text"
+        >
+          <Type size={15} />
         </button>
 
         <div className="drafo-hud-divider" />

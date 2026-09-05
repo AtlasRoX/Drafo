@@ -30,7 +30,14 @@ export type NodeType =
   | 'custom-card'
   | 'section-header'
   | 'container'
-  | 'group';
+  | 'group'
+  | 'sql-table'
+  | 'uml-class'
+  | 'json-viewer'
+  | 'type-schema'
+  | 'text'
+  | 'image'
+  | 'link-embed';
 
 export type NodeStatus = 'online' | 'idle' | 'busy' | 'error' | 'none';
 
@@ -59,6 +66,74 @@ export interface NodeStyle {
   shadow?: boolean;
 }
 
+export interface SqlColumn {
+  name: string;
+  type: string;
+  isPk?: boolean;
+  isFk?: boolean;
+  fkTarget?: string;
+  isNullable?: boolean;
+  isUnique?: boolean;
+  defaultValue?: string;
+}
+
+export interface UmlMember {
+  name: string;
+  type?: string;
+  visibility?: '+' | '-' | '#' | '~';
+  isMethod?: boolean;
+  parameters?: string;
+  returnType?: string;
+}
+
+export interface SchemaProperty {
+  name: string;
+  type: string;
+  required?: boolean;
+  description?: string;
+  defaultValue?: string;
+}
+
+export interface FlowNodeCustomData {
+  browserDots?: boolean;
+  urlBarText?: string;
+  cylinderCapColor?: string;
+  pillNumber?: string;
+  actionTag?: string;
+  terminalCommand?: string;
+  deviceType?: 'iphone' | 'android' | 'tablet';
+  badgeColor?: string;
+  isContainer?: boolean;
+  containerLabel?: string;
+  childNodeIds?: string[];
+  // Visual schema and model fields
+  sqlColumns?: SqlColumn[];
+  sqlTableName?: string;
+  sqlSchemaName?: string;
+  umlStereotype?: string;
+  umlMembers?: UmlMember[];
+  jsonData?: any;
+  jsonRaw?: string;
+  schemaProperties?: SchemaProperty[];
+  schemaKind?: 'typescript' | 'graphql' | 'jsonschema' | 'protobuf';
+  imageUrl?: string;
+  linkUrl?: string;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkFavicon?: string;
+  fontSize?: number;
+  fontWeight?: string | number;
+  fontFamily?: string;
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline' | 'line-through';
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  lineHeight?: number | string;
+  letterSpacing?: number | string;
+  textHighlight?: string;
+  stickyColor?: string;
+}
+
 export interface FlowNode {
   id: string;
   type: NodeType;
@@ -75,19 +150,7 @@ export interface FlowNode {
   style: NodeStyle;
   icon?: string;
   sectionId?: string;
-  customData?: {
-    browserDots?: boolean;
-    urlBarText?: string;
-    cylinderCapColor?: string;
-    pillNumber?: string;
-    actionTag?: string;
-    terminalCommand?: string;
-    deviceType?: 'iphone' | 'android' | 'tablet';
-    badgeColor?: string;
-    isContainer?: boolean;
-    containerLabel?: string;
-    childNodeIds?: string[];
-  };
+  customData?: FlowNodeCustomData;
   isLocked?: boolean;
 }
 
@@ -109,6 +172,7 @@ export interface FlowEdge {
   isAnimated?: boolean;
   latency?: string;
   controlPoint?: { x: number; y: number };
+  waypoints?: { x: number; y: number }[];
 }
 
 export interface FlowSection {

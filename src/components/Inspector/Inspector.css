@@ -7,12 +7,156 @@
   border-left: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 16px;
+  padding: 14px;
+  gap: 14px;
   overflow-y: auto;
   z-index: 40;
   flex-shrink: 0;
   transition: width 0.2s ease, transform 0.2s ease;
+}
+
+/* Inspector Nav Strip */
+.drafo-inspector-nav-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #F1F5F9;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.drafo-inspector-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 9px;
+  flex: 1;
+}
+
+.drafo-inspector-nav-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.drafo-inspector-nav-tab:hover:not(.active) {
+  color: #0F172A;
+}
+
+.drafo-inspector-nav-tab.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.drafo-inspector-nav-tab.ai-tab {
+  color: #1A73E8;
+}
+
+.drafo-ai-tab-glow-pill {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #1A73E8, #8AB4F8);
+  color: #FFFFFF;
+  letter-spacing: 0.02em;
+}
+
+.drafo-inspector-collapse-strip-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.drafo-inspector-collapse-strip-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* Quick AI Flow Launch Banner */
+.drafo-inspector-ai-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #FAF5FF 100%);
+  border: 1px solid #C7D2FE;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drafo-inspector-ai-banner:hover {
+  border-color: #818CF8;
+  background: linear-gradient(135deg, #E0E7FF 0%, #F5F3FF 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.1);
+}
+
+.drafo-inspector-ai-banner-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+.drafo-inspector-ai-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.drafo-inspector-ai-banner-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E1B4B;
+}
+
+.drafo-inspector-ai-banner-sub {
+  font-size: 10.5px;
+  color: #6366F1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafo-inspector-ai-banner-arrow {
+  color: #818CF8;
+  flex-shrink: 0;
 }
 
 /* Collapsed Tab (Icon Only) */
@@ -627,8 +771,36 @@
 
 .canva-markers-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
+}
+
+.canva-markers-row .drafo-input {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #FFFFFF;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 11px;
+  padding-right: 20px !important;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1.5px solid #E2E8F0;
+  color: #1E293B;
+  font-weight: 500;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.canva-markers-row .drafo-input:hover {
+  border-color: #CBD5E1;
+}
+
+.canva-markers-row .drafo-input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  outline: none;
 }
 
 .canva-swap-btn {
@@ -643,14 +815,115 @@
   color: #475569;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  margin-bottom: 0px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .canva-swap-btn:hover {
   background: #EFF6FF;
   border-color: #93C5FD;
   color: #2563EB;
-  transform: rotate(180deg);
+  transform: rotate(180deg) scale(1.05);
+}
+
+.canva-swap-btn:active {
+  transform: rotate(180deg) scale(0.95);
+}
+
+/* Custom Modern Range Slider */
+.drafo-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(
+    to right,
+    #2563EB 0%,
+    #2563EB var(--slider-pct, 20%),
+    #E2E8F0 var(--slider-pct, 20%),
+    #E2E8F0 100%
+  );
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  margin: 10px 0 6px 0;
+  transition: background 0.1s ease;
+}
+
+.drafo-slider:focus-visible {
+  outline: none;
+}
+
+.drafo-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+}
+
+.drafo-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #E2E8F0;
+}
+
+.drafo-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #2563EB;
+}
+
+.drafo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2.5px solid #2563EB;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35), 0 1px 2px rgba(0, 0, 0, 0.08);
+  cursor: grab;
+  margin-top: -5px;
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease;
+}
+
+.drafo-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2.5px solid #2563EB;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35), 0 1px 2px rgba(0, 0, 0, 0.08);
+  cursor: grab;
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease;
+}
+
+.drafo-slider::-webkit-slider-thumb:hover,
+.drafo-slider::-moz-range-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45), 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+.drafo-slider::-webkit-slider-thumb:active,
+.drafo-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.22);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.55), 0 0 0 6px rgba(37, 99, 235, 0.2);
+}
+
+[data-theme='dark'] .drafo-slider {
+  background: linear-gradient(
+    to right,
+    #3B82F6 0%,
+    #3B82F6 var(--slider-pct, 20%),
+    #334155 var(--slider-pct, 20%),
+    #334155 100%
+  );
+}
+
+[data-theme='dark'] .drafo-slider::-webkit-slider-thumb,
+[data-theme='dark'] .drafo-slider::-moz-range-thumb {
+  background: #0F172A;
+  border-color: #60A5FA;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .canva-reset-btn {
@@ -684,6 +957,201 @@
   line-height: 1.4;
   margin-top: 6px;
 }
+
+/* ==========================================================================
+   TYPOGRAPHY & TEXT FORMATTING PANEL
+   ========================================================================== */
+
+.drafo-typography-panel {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.drafo-typography-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  letter-spacing: -0.01em;
+}
+
+.drafo-typography-subfield {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drafo-font-size-stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drafo-font-stepper-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drafo-font-stepper-btn:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #2563EB;
+}
+
+.drafo-font-size-input {
+  flex: 1;
+  height: 28px;
+  text-align: center;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+  outline: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.drafo-font-size-input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.drafo-font-size-unit {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.drafo-font-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.drafo-font-preset-chip {
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drafo-font-preset-chip:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #2563EB;
+}
+
+.drafo-font-preset-chip.active {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+  color: #1D4ED8;
+  font-weight: 700;
+}
+
+.drafo-highlight-swatches-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.drafo-highlight-chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1.5px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+
+.drafo-highlight-chip:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.drafo-highlight-chip.active {
+  border-color: #2563EB !important;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+/* Dark theme styling */
+[data-theme='dark'] .drafo-typography-panel {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .drafo-typography-panel-header {
+  color: #F8FAFC;
+}
+
+[data-theme='dark'] .drafo-font-stepper-btn {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+[data-theme='dark'] .drafo-font-stepper-btn:hover {
+  background: #1E293B;
+  color: #60A5FA;
+  border-color: #3B82F6;
+}
+
+[data-theme='dark'] .drafo-font-size-input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+[data-theme='dark'] .drafo-font-preset-chip {
+  background: #0F172A;
+  border-color: #334155;
+  color: #94A3B8;
+}
+
+[data-theme='dark'] .drafo-font-preset-chip:hover {
+  background: #1E293B;
+  color: #60A5FA;
+  border-color: #3B82F6;
+}
+
+[data-theme='dark'] .drafo-font-preset-chip.active {
+  background: #1E3A8A;
+  border-color: #3B82F6;
+  color: #BFDBFE;
+}
+
 
 
 

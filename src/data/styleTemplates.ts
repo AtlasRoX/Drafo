@@ -17,123 +17,13 @@ export interface StyleTemplate {
 }
 
 export const DEFAULT_STYLE_TEMPLATES: StyleTemplate[] = [
-  // --- Modern Dark & High-Contrast Pro Themes ---
-  {
-    id: 'obsidian-dark',
-    name: 'Obsidian Dark',
-    description: 'Deep onyx surface with electric cyan accent',
-    bg: '#0F172A',
-    accentColor: '#38BDF8',
-    borderColor: '#38BDF8',
-    tint: 'none',
-    textColor: '#F8FAFC',
-    subtextColor: '#94A3B8'
-  },
-  {
-    id: 'linear-charcoal',
-    name: 'Linear Charcoal',
-    description: 'Matte slate dark with crisp zinc metallic border',
-    bg: '#18181B',
-    accentColor: '#A1A1AA',
-    borderColor: '#3F3F46',
-    tint: 'none',
-    textColor: '#FAFAFA',
-    subtextColor: '#A1A1AA'
-  },
-  {
-    id: 'vercel-monochrome',
-    name: 'Vercel Pitch Black',
-    description: 'Pure stark black with pure white vector stroke',
-    bg: '#000000',
-    accentColor: '#FFFFFF',
-    borderColor: '#27272A',
-    tint: 'none',
-    textColor: '#FFFFFF',
-    subtextColor: '#A1A1AA'
-  },
-  {
-    id: 'supabase-emerald',
-    name: 'Supabase Emerald',
-    description: 'Deep forest black with cyber emerald neon glow',
-    bg: '#131915',
-    accentColor: '#3ECF8E',
-    borderColor: '#246547',
-    tint: 'none',
-    textColor: '#ECFDF5',
-    subtextColor: '#6EE7B7'
-  },
-  {
-    id: 'midnight-indigo',
-    name: 'Midnight Indigo',
-    description: 'Twilight purple-slate with royal indigo border',
-    bg: '#1E1B4B',
-    accentColor: '#818CF8',
-    borderColor: '#6366F1',
-    tint: 'none',
-    textColor: '#EEF2FF',
-    subtextColor: '#A5B4FC'
-  },
-  {
-    id: 'cyberpunk-amber',
-    name: 'Cyber Amber',
-    description: 'Dark tungsten surface with bright neon amber accent',
-    bg: '#1C1917',
-    accentColor: '#F59E0B',
-    borderColor: '#D97706',
-    tint: 'none',
-    textColor: '#FEF3C7',
-    subtextColor: '#FBBF24'
-  },
-  {
-    id: 'oceanic-teal',
-    name: 'Deep Oceanic',
-    description: 'Abyssal deep teal card with glowing cyan accent',
-    bg: '#082F49',
-    accentColor: '#06B6D4',
-    borderColor: '#0891B2',
-    tint: 'none',
-    textColor: '#ECFEFF',
-    subtextColor: '#67E8F9'
-  },
-  {
-    id: 'crimson-protocol',
-    name: 'Crimson Protocol',
-    description: 'Dark wine-black surface with vibrant ruby red stroke',
-    bg: '#1F1315',
-    accentColor: '#F43F5E',
-    borderColor: '#E11D48',
-    tint: 'none',
-    textColor: '#FFF1F2',
-    subtextColor: '#FDA4AF'
-  },
-  {
-    id: 'royal-amethyst',
-    name: 'Royal Amethyst',
-    description: 'Deep violet night card with bright orchid purple',
-    bg: '#1E1035',
-    accentColor: '#C084FC',
-    borderColor: '#9333EA',
-    tint: 'none',
-    textColor: '#FAF5FF',
-    subtextColor: '#D8B4FE'
-  },
-  {
-    id: 'titanium-gray',
-    name: 'Titanium Slate',
-    description: 'Industrial slate card with muted steel border',
-    bg: '#1E293B',
-    accentColor: '#94A3B8',
-    borderColor: '#475569',
-    tint: 'none',
-    textColor: '#F8FAFC',
-    subtextColor: '#94A3B8'
-  },
-
-  // --- Clean Light & Enterprise Themes ---
+  // =========================================================================
+  // 1. TIMELESS ESSENTIALS (Kept Core Standards)
+  // =========================================================================
   {
     id: 'azure-light',
     name: 'Azure Modern',
-    description: 'Clean white surface with cobalt blue accent',
+    description: 'Clean crisp white surface with electric cobalt vector border',
     bg: '#FFFFFF',
     accentColor: '#2563EB',
     borderColor: '#3B82F6',
@@ -142,81 +32,247 @@ export const DEFAULT_STYLE_TEMPLATES: StyleTemplate[] = [
     subtextColor: '#475569'
   },
   {
-    id: 'emerald-garden',
-    name: 'Emerald Garden',
-    description: 'Fresh mint surface wash with vivid green accent',
-    bg: '#F0FDF4',
-    accentColor: '#10B981',
-    borderColor: '#059669',
-    tint: 'subtle',
-    textColor: '#064E3B',
-    subtextColor: '#047857'
-  },
-  {
-    id: 'nordic-frost',
-    name: 'Nordic Frost',
-    description: 'Cool glacial blue wash with sky blue border',
-    bg: '#F0F9FF',
-    accentColor: '#0284C7',
-    borderColor: '#38BDF8',
-    tint: 'subtle',
-    textColor: '#0C4A6E',
-    subtextColor: '#0369A1'
-  },
-  {
-    id: 'sunset-amber',
-    name: 'Sunset Amber',
-    description: 'Warm gold surface wash with amber accent',
-    bg: '#FFFBEB',
-    accentColor: '#D97706',
-    borderColor: '#F59E0B',
-    tint: 'subtle',
-    textColor: '#78350F',
-    subtextColor: '#B45309'
-  },
-  {
-    id: 'solar-orange',
-    name: 'Solar Orange',
-    description: 'Warm sunrise card with tangerine orange stroke',
-    bg: '#FFF7ED',
-    accentColor: '#EA580C',
-    borderColor: '#F97316',
-    tint: 'subtle',
-    textColor: '#7C2D12',
-    subtextColor: '#C2410C'
-  },
-  {
-    id: 'ruby-minimal',
-    name: 'Ruby Rose',
-    description: 'Soft pastel red wash with crimson rose accent',
-    bg: '#FFF1F2',
-    accentColor: '#E11D48',
-    borderColor: '#FB7185',
-    tint: 'subtle',
-    textColor: '#881337',
-    subtextColor: '#BE123C'
-  },
-  {
-    id: 'frosted-minimal',
-    name: 'Frosted Slate',
-    description: 'Neutral off-white slate with monochrome border',
-    bg: '#F8FAFC',
-    accentColor: '#475569',
-    borderColor: '#CBD5E1',
+    id: 'obsidian-cyber',
+    name: 'Deep Obsidian',
+    description: 'Deep midnight void with glowing electric cyan accent',
+    bg: '#0B0F19',
+    accentColor: '#38BDF8',
+    borderColor: '#0284C7',
     tint: 'none',
-    textColor: '#0F172A',
-    subtextColor: '#64748B'
+    textColor: '#F8FAFC',
+    subtextColor: '#94A3B8'
   },
   {
     id: 'glass-wireframe',
-    name: 'Glass Wireframe',
-    description: 'Transparent interior with crisp cobalt vector border',
+    name: 'Glass Blueprint',
+    description: 'Transparent interior with crisp cobalt architectural wireframe',
     bg: 'transparent',
     accentColor: '#2563EB',
     borderColor: '#2563EB',
     tint: 'none',
     textColor: '#0F172A',
     subtextColor: '#64748B'
+  },
+
+  // =========================================================================
+  // 2. ELECTRIC NEON & CYBERPUNK (Vibrant High-Contrast Dark Glows)
+  // =========================================================================
+  {
+    id: 'neon-cyberpunk',
+    name: 'Cyberpunk Neon',
+    description: 'Dark carbon chassis with blistering electric neon yellow stroke',
+    bg: '#0F172A',
+    accentColor: '#FACC15',
+    borderColor: '#EAB308',
+    tint: 'none',
+    textColor: '#FEF9C3',
+    subtextColor: '#FDE047'
+  },
+  {
+    id: 'synthwave-sunset',
+    name: 'Synthwave Sunset',
+    description: 'Deep purple twilight with neon magenta rose border and glow',
+    bg: '#180B2B',
+    accentColor: '#F43F5E',
+    borderColor: '#E11D48',
+    tint: 'none',
+    textColor: '#FFE4E6',
+    subtextColor: '#FDA4AF'
+  },
+  {
+    id: 'tokyo-cyan',
+    name: 'Tokyo Matrix',
+    description: 'Abyssal cyber-teal with radiant hyper-cyan vector line',
+    bg: '#041B1F',
+    accentColor: '#06B6D4',
+    borderColor: '#22D3EE',
+    tint: 'none',
+    textColor: '#ECFEFF',
+    subtextColor: '#67E8F9'
+  },
+  {
+    id: 'hyper-lime',
+    name: 'Hyper Lime',
+    description: 'Deep carbon matrix with radioactive laser-green edge',
+    bg: '#0A1A0F',
+    accentColor: '#22C55E',
+    borderColor: '#4ADE80',
+    tint: 'none',
+    textColor: '#F0FDF4',
+    subtextColor: '#86EFAC'
+  },
+  {
+    id: 'cosmic-violet',
+    name: 'Cosmic Violet',
+    description: 'Deep celestial violet night with electric amethyst outline',
+    bg: '#140A2E',
+    accentColor: '#A855F7',
+    borderColor: '#C084FC',
+    tint: 'none',
+    textColor: '#FAF5FF',
+    subtextColor: '#E9D5FF'
+  },
+  {
+    id: 'solar-plasma',
+    name: 'Solar Flare',
+    description: 'Dark obsidian copper with blistering solar tangerine border',
+    bg: '#1C0E08',
+    accentColor: '#FF6B00',
+    borderColor: '#FB923C',
+    tint: 'none',
+    textColor: '#FFF7ED',
+    subtextColor: '#FDBA74'
+  },
+
+  // =========================================================================
+  // 3. SATURATED JEWEL TONES (Bold, Rich & Colorful Filled Surfaces)
+  // =========================================================================
+  {
+    id: 'royal-sapphire',
+    name: 'Royal Sapphire',
+    description: 'Saturated ultramarine blue surface with bright sky blue trim',
+    bg: '#1D4ED8',
+    accentColor: '#93C5FD',
+    borderColor: '#60A5FA',
+    tint: 'none',
+    textColor: '#FFFFFF',
+    subtextColor: '#DBEAFE'
+  },
+  {
+    id: 'emerald-jewel',
+    name: 'Vivid Emerald',
+    description: 'Rich jewel forest green card with crisp mint borders',
+    bg: '#047857',
+    accentColor: '#6EE7B7',
+    borderColor: '#34D399',
+    tint: 'none',
+    textColor: '#FFFFFF',
+    subtextColor: '#D1FAE5'
+  },
+  {
+    id: 'velvet-amethyst',
+    name: 'Velvet Amethyst',
+    description: 'Luxurious saturated royal purple with vibrant lilac edge',
+    bg: '#6D28D9',
+    accentColor: '#DDD6FE',
+    borderColor: '#A78BFA',
+    tint: 'none',
+    textColor: '#FFFFFF',
+    subtextColor: '#EDE9FE'
+  },
+  {
+    id: 'crimson-ruby',
+    name: 'Crimson Ruby',
+    description: 'Bold saturated ruby wine surface with glowing rose trim',
+    bg: '#BE123C',
+    accentColor: '#FECDD3',
+    borderColor: '#FB7185',
+    tint: 'none',
+    textColor: '#FFFFFF',
+    subtextColor: '#FFE4E6'
+  },
+  {
+    id: 'deep-teal',
+    name: 'Tropic Teal',
+    description: 'Deep saturated Caribbean teal with radiant seafoam border',
+    bg: '#0F766E',
+    accentColor: '#99F6E4',
+    borderColor: '#2DD4BF',
+    tint: 'none',
+    textColor: '#FFFFFF',
+    subtextColor: '#CCFBF1'
+  },
+
+  // =========================================================================
+  // 4. AESTHETIC MODERN PASTELS (Drenched Colorful Light Surfaces)
+  // =========================================================================
+  {
+    id: 'lavender-dream',
+    name: 'Lavender Dream',
+    description: 'Soft pastel lilac surface with bold royal violet typography',
+    bg: '#F3E8FF',
+    accentColor: '#7C3AED',
+    borderColor: '#8B5CF6',
+    tint: 'subtle',
+    textColor: '#4C1D95',
+    subtextColor: '#6D28D9'
+  },
+  {
+    id: 'mint-mojito',
+    name: 'Mint Mojito',
+    description: 'Invigorating aqua mint surface with deep tropical teal outline',
+    bg: '#CCFBF1',
+    accentColor: '#0F766E',
+    borderColor: '#14B8A6',
+    tint: 'subtle',
+    textColor: '#134E4A',
+    subtextColor: '#115E59'
+  },
+  {
+    id: 'peach-sorbet',
+    name: 'Peach Sorbet',
+    description: 'Warm luscious coral-pink wash with rich strawberry crimson border',
+    bg: '#FFE4E6',
+    accentColor: '#E11D48',
+    borderColor: '#F43F5E',
+    tint: 'subtle',
+    textColor: '#881337',
+    subtextColor: '#9F1239'
+  },
+  {
+    id: 'lemon-burst',
+    name: 'Lemonade Fizz',
+    description: 'Sunlit bright golden surface with warm amber frame',
+    bg: '#FEF9C3',
+    accentColor: '#CA8A04',
+    borderColor: '#EAB308',
+    tint: 'subtle',
+    textColor: '#713F12',
+    subtextColor: '#854D0E'
+  },
+  {
+    id: 'sky-glacier',
+    name: 'Electric Sky',
+    description: 'Radiant glacier sky blue with vivid azure outline',
+    bg: '#E0F2FE',
+    accentColor: '#0284C7',
+    borderColor: '#0EA5E9',
+    tint: 'subtle',
+    textColor: '#0C4A6E',
+    subtextColor: '#0369A1'
+  },
+  {
+    id: 'bubblegum-pop',
+    name: 'Bubblegum Pop',
+    description: 'Playful vibrant candy pink surface with punchy magenta edge',
+    bg: '#FCE7F3',
+    accentColor: '#DB2777',
+    borderColor: '#EC4899',
+    tint: 'subtle',
+    textColor: '#831843',
+    subtextColor: '#9D174D'
+  },
+  {
+    id: 'matcha-green',
+    name: 'Matcha Latte',
+    description: 'Smooth organic matcha green wash with bold forest green stroke',
+    bg: '#DCFCE7',
+    accentColor: '#16A34A',
+    borderColor: '#22C55E',
+    tint: 'subtle',
+    textColor: '#14532D',
+    subtextColor: '#166534'
+  },
+  {
+    id: 'sunset-glow',
+    name: 'Sunset Horizon',
+    description: 'Warm golden apricot wash with radiant sunset orange edge',
+    bg: '#FFEDD5',
+    accentColor: '#EA580C',
+    borderColor: '#F97316',
+    tint: 'subtle',
+    textColor: '#7C2D12',
+    subtextColor: '#9A3412'
   }
 ];
 

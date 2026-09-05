@@ -25,6 +25,7 @@ interface ProjectDashboardProps {
   onOpenProject: (projectId: string) => void;
   onCreateProject: (templateId?: string) => void;
   onOpenAIGenerator: () => void;
+  onOpenImportVisualize?: () => void;
   onDuplicateProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
   onRenameProject: (projectId: string, newName: string) => void;
@@ -37,6 +38,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   onOpenProject,
   onCreateProject,
   onOpenAIGenerator,
+  onOpenImportVisualize,
   onDuplicateProject,
   onDeleteProject,
   onRenameProject,
@@ -118,7 +120,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       {/* Top Universal Dashboard Bar */}
       <header className="drafo-dashboard-header">
         <div className="drafo-dash-left">
-          <DrafoLogo size={28} showWordmark={true} />
+          <a href="/" title="Back to Home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <DrafoLogo size={28} showWordmark={true} />
+          </a>
 
           {/* Search Bar */}
           <div className="drafo-dash-search-box">
@@ -144,17 +148,24 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
         {/* Action Controls */}
         <div className="drafo-dash-right">
-          <label className="drafo-dash-btn secondary cursor-pointer">
-            <Upload size={14} />
-            <span>Import</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.drafo"
-              onChange={handleFileInput}
-              style={{ display: 'none' }}
-            />
-          </label>
+          {onOpenImportVisualize ? (
+            <button className="drafo-dash-btn secondary" onClick={onOpenImportVisualize}>
+              <Upload size={14} />
+              <span>Import & Visualize</span>
+            </button>
+          ) : (
+            <label className="drafo-dash-btn secondary cursor-pointer">
+              <Upload size={14} />
+              <span>Import</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.drafo"
+                onChange={handleFileInput}
+                style={{ display: 'none' }}
+              />
+            </label>
+          )}
 
           <button className="drafo-dash-btn ai-special" onClick={onOpenAIGenerator}>
             <Wand2 size={14} />

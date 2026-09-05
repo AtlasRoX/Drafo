@@ -1,0 +1,334 @@
+/* ==========================================================================
+   Drafo Universal Import & Visualize Studio — Redesigned CSS
+   ========================================================================== */
+
+.drafo-modal-container.import-visualize-modal {
+  max-width: 860px;
+  width: 95%;
+  max-height: 90vh;
+  padding: 24px;
+  gap: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.import-visualize-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 2px;
+}
+
+.import-visualize-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-visualize-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.22);
+}
+
+.import-visualize-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.import-visualize-subtitle {
+  font-size: 12px;
+  color: #64748B;
+  margin: 3px 0 0 0;
+}
+
+/* ── Tabs Bar (thin, scrollable) ────────────────────────────────────────── */
+.import-format-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.import-format-tabs-bar::-webkit-scrollbar {
+  height: 3px;
+}
+.import-format-tabs-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.import-format-tabs-bar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.import-format-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.13s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.import-format-tab-btn:hover {
+  color: #1E293B;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.import-format-tab-btn.active {
+  background: #FFFFFF;
+  color: #4F46E5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.09);
+}
+
+/* ── Action Tools Bar ──────────────────────────────────────────────────── */
+.import-editor-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ── Action Buttons ─────────────────────────────────────────────────────── */
+.import-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.import-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+/* labeled (Upload File) */
+.import-tool-btn--labeled {
+  padding: 5px 10px;
+}
+
+/* icon only */
+.import-tool-btn--icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.import-tool-btn:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.import-tool-btn--danger:hover {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+}
+
+/* ── Light Code Editor ──────────────────────────────────────────────────── */
+.import-code-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 260px;
+  border-radius: 10px;
+  border: 1.5px solid #E2E8F0;
+  background: #FAFBFC;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.import-code-container:focus-within {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.import-code-textarea {
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  color: #1E293B;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.import-code-textarea::-webkit-scrollbar { width: 5px; }
+.import-code-textarea::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+
+.import-code-textarea::placeholder {
+  color: #94A3B8;
+}
+
+/* ── Status Banner ──────────────────────────────────────────────────────── */
+.import-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 13px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.import-status-banner.success { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+.import-status-banner.error { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+.import-status-banner.idle { background: #F8FAFC; border: 1px solid #E2E8F0; color: #64748B; }
+
+.import-status-left { display: flex; align-items: center; gap: 8px; }
+
+.import-stats-pills { display: flex; align-items: center; gap: 6px; }
+.import-stat-chip {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+/* ── Options Row ────────────────────────────────────────────────────────── */
+.import-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.import-direction-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.direction-buttons {
+  display: flex;
+  gap: 3px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.direction-btn {
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.direction-btn.active {
+  background: #FFFFFF;
+  color: #4F46E5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.import-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.import-cancel-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 9px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.import-cancel-btn:hover { background: #F8FAFC; color: #0F172A; border-color: #CBD5E1; }
+
+.import-insert-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #EEF2FF;
+  border: 1.5px solid #C7D2FE;
+  border-radius: 9px;
+  color: #4338CA;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.import-insert-btn:hover { background: #E0E7FF; }
+.import-insert-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.import-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  border: none;
+  border-radius: 9px;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+.import-submit-btn:hover:not(:disabled) {
+  opacity: 0.94;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.42);
+}
+.import-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
